@@ -1,23 +1,23 @@
-
 extern crate tsz;
 
-use tsz::stream::{BufferedWriter, BufferedReader};
-use tsz::{StdDecoder, StdEncoder, DataPoint, Encode, Decode};
 use std::sync::{Arc, RwLock};
-use std::ops::{DerefMut, Deref};
+use std::ops::DerefMut;
+use tsz::storage::mut_mem::TSMap;
+use tsz::{DataPoint, Decode};
+use std::borrow::Borrow;
 
 fn main() {
-    let bytes: Vec<u8> = Vec::new();
-    let rw = RwLock::new(bytes);
-    let bytes_rw = Arc::new(rw);
+    let ts_map = Arc::new(RwLock::new(TSMap::new()));
 
     // writer
     {
-        let clone = bytes_rw.clone();
+        let clone = ts_map.clone();
         std::thread::spawn(move || {
-            let mut a = clone.write().unwrap();
-            let a = a.deref_mut();
-            a.push(1);
+            let mut map = clone.write().unwrap();
+            let map = map.deref_mut();
+
+            let d1 = DataPoint::new(1482268055 + 10, 1.24);
+            map.append(String::from("abc").borrow(), d1);
 
 //                let writer = BufferedWriter::new(bytes.as_mut());
 //                let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
@@ -41,16 +41,32 @@ fn main() {
 
     let mut threads = Vec::new();
     for num in 0..10 {
-        let rw = bytes_rw.clone();
+        let clone = ts_map.clone();
         threads.push(std::thread::spawn(move || {
-            let a = rw.read().unwrap();
-            let a = a.deref();
-            if a.len() > 0 {
-                let n = a.get(0).expect("abc");
-                println!("{} => {}", num, n);
-            } else {
-                println!("{} => empty", num);
+            let map = clone.read().unwrap();
+            match map.get(String::from("abc").borrow()) {
+                Some(ts) => {
+                    ts.get_decoder(0, 0, |mut decoder| {
+                        loop {
+                            match decoder.next() {
+                                Ok(dp) => {
+                                    println!("reader{} => {}, {}", num, dp.time, dp.value);
+                                }
+                                Err(_) => {
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                }
+                None => {}
             }
+//            if a.len() > 0 {
+//                let n = a.get(0).expect("abc");
+//                println!("{} => {}", num, n);
+//            } else {
+//                println!("{} => empty", num);
+//            }
 
 //                let reader = BufferedReader::new(bytes_clone.as_ref());
 //                let mut decoder = StdDecoder::new(reader);

@@ -3,6 +3,7 @@ use std::mem;
 use crate::encode::Encode;
 use crate::stream::Write;
 use crate::{Bit, DataPoint};
+use crate::stream::buffer::Buffer;
 
 // END_MARKER relies on the fact that when we encode the delta of delta for a number that requires
 // more than 12 bits we write four control bits 1111 followed by the 32 bits of the value. Since
@@ -59,6 +60,10 @@ impl<T> StdEncoder<T>
         e.w.write_bits(start, 64);
 
         e
+    }
+
+    pub fn get_buffer(&self) -> &Buffer {
+        self.w.get_buffer()
     }
 
     pub fn get_size(&self) -> u64 {
@@ -192,18 +197,17 @@ impl<T> Encode for StdEncoder<T>
 mod tests {
     use super::StdEncoder;
     use crate::encode::Encode;
-    use crate::stream::BufferedWriter;
+    use crate::stream::{BufferedWriter};
     use crate::DataPoint;
 
     #[test]
     fn create_new_encoder() {
-        let mut v = Vec::new();
-        let w = BufferedWriter::new(v.as_mut());
+        let w = BufferedWriter::new();
         let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
         let e = StdEncoder::new(start_time, w);
 
+        let bytes = e.get_buffer().to_vec();
         e.close();
-        let bytes = v.into_boxed_slice();
         let expected_bytes: [u8; 13] = [0, 0, 0, 0, 88, 89, 157, 151, 240, 0, 0, 0, 0];
 
         assert_eq!(bytes[..], expected_bytes[..]);
@@ -211,8 +215,7 @@ mod tests {
 
     #[test]
     fn encode_datapoint() {
-        let mut v = Vec::new();
-        let w = BufferedWriter::new(v.as_mut());
+        let w = BufferedWriter::new();
         let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
         let mut e = StdEncoder::new(start_time, w);
 
@@ -220,8 +223,8 @@ mod tests {
 
         e.encode(d1);
 
+        let bytes = e.get_buffer().to_vec();
         e.close();
-        let bytes = v.into_boxed_slice();
         let expected_bytes: [u8; 23] = [
             0, 0, 0, 0, 88, 89, 157, 151, 0, 20, 127, 231, 174, 20, 122, 225, 71, 175, 224, 0, 0,
             0, 0,
@@ -232,8 +235,7 @@ mod tests {
 
     #[test]
     fn encode_multiple_datapoints() {
-        let mut v = Vec::new();
-        let w = BufferedWriter::new(v.as_mut());
+        let w = BufferedWriter::new();
         let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
         let mut e = StdEncoder::new(start_time, w);
 
@@ -252,8 +254,8 @@ mod tests {
         e.encode(d4);
         e.encode(d5);
 
+        let bytes = e.get_buffer().to_vec();
         e.close();
-        let bytes = v.into_boxed_slice();
         let expected_bytes: [u8; 61] = [
             0, 0, 0, 0, 88, 89, 157, 151, 0, 20, 127, 231, 174, 20, 122, 225, 71, 174, 204, 207,
             30, 71, 145, 228, 121, 30, 96, 88, 61, 255, 253, 91, 214, 245, 189, 111, 91, 3, 232, 1,

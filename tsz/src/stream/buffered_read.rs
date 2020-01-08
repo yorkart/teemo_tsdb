@@ -2,20 +2,21 @@
 
 use crate::stream::{Error, Read};
 use super::Bit;
+use crate::stream::buffer::Buffer;
 
 /// BufferedReader
 ///
 /// BufferedReader encapsulates a buffer of bytes which can be read from.
 #[derive(Debug)]
 pub struct BufferedReader<'a> {
-    bytes: &'a Vec<u8>, // internal buffer of bytes
+    bytes: &'a Buffer, // internal buffer of bytes
     index: usize,   // index into bytes
     pos: u32,       // position in the byte we are currently reading
 }
 
 impl<'a> BufferedReader<'a> {
     /// new creates a new `BufferedReader` from `bytes`
-    pub fn new(bytes: &'a Vec<u8>) -> Self {
+    pub fn new(bytes: &'a Buffer) -> Self {
         BufferedReader {
             bytes,
             index: 0,

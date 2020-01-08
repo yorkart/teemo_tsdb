@@ -1,21 +1,21 @@
-
 use crate::stream::Write;
 use crate::Bit;
+use crate::stream::buffer::Buffer;
 
 /// BufferedWriter
 ///
 /// BufferedWriter writes bytes to a buffer.
 #[derive(Debug)]
-pub struct BufferedWriter<'a> {
-    buf: &'a mut Vec<u8>,
+pub struct BufferedWriter {
+    buf: Buffer,
     pos: u32, // position in the last byte in the buffer
 }
 
-impl<'a> BufferedWriter<'a> {
+impl BufferedWriter {
     /// new creates a new BufferedWriter
-    pub fn new(bytes: &'a mut Vec<u8>) -> Self {
+    pub fn new() -> Self {
         BufferedWriter {
-            buf: bytes,
+            buf: Buffer::new(),
             // set pos to 8 to indicate the buffer has no space presently since it is empty
             pos: 8,
         }
@@ -38,7 +38,11 @@ impl<'a> BufferedWriter<'a> {
     }
 }
 
-impl<'a> Write for BufferedWriter<'a> {
+impl Write for BufferedWriter {
+    fn get_buffer(&self) -> &Buffer {
+        self.buf.as_ref()
+    }
+
     fn write_bit(&mut self, bit: Bit) {
         if self.pos == 8 {
             self.grow();
@@ -115,8 +119,7 @@ mod tests {
 
     #[test]
     fn write_bit() {
-        let mut v = Vec::new();
-        let mut b = BufferedWriter::new(v.as_mut());
+        let mut b = BufferedWriter::new();
 
         // 170 = 0b10101010
         for i in 0..8 {
@@ -157,8 +160,7 @@ mod tests {
 
     #[test]
     fn write_byte() {
-        let mut v = Vec::new();
-        let mut b = BufferedWriter::new(v.as_mut());
+        let mut b = BufferedWriter::new();
 
         b.write_byte(234);
         b.write_byte(188);
@@ -187,8 +189,7 @@ mod tests {
 
     #[test]
     fn write_bits() {
-        let mut v = Vec::new();
-        let mut b = BufferedWriter::new(v.as_mut());
+        let mut b = BufferedWriter::new();
 
         // 101011
         b.write_bits(43, 6);
@@ -215,8 +216,7 @@ mod tests {
 
     #[test]
     fn write_mixed() {
-        let mut v = Vec::new();
-        let mut b = BufferedWriter::new(v.as_mut());
+        let mut b = BufferedWriter::new();
 
         // 1010 1010
         for i in 0..8 {

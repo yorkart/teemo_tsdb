@@ -27,8 +27,8 @@ impl Bit {
 /// Struct used to represent a single data point. Consists of a time and value.
 #[derive(Debug, PartialEq, Copy)]
 pub struct DataPoint {
-    time: u64,
-    value: f64,
+    pub time: u64,
+    pub value: f64,
 }
 
 impl Clone for DataPoint {
@@ -60,8 +60,6 @@ pub use self::decode::Decode;
 
 #[cfg(test)]
 mod tests {
-    use crate::stream::{BufferedWriter, BufferedReader};
-    use crate::{StdDecoder, StdEncoder, DataPoint, Encode, Decode};
     use std::sync::{Arc, RwLock};
     use std::ops::{DerefMut, Deref};
 
@@ -106,7 +104,7 @@ mod tests {
                 let a = rw.read().unwrap();
                 let a = a.deref();
                 let n = a.get(0).expect("abc");
-                println!("{}", n);
+                println!("{} => {}", num, n);
 
 //                let reader = BufferedReader::new(bytes_clone.as_ref());
 //                let mut decoder = StdDecoder::new(reader);

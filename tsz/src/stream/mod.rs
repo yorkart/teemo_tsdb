@@ -47,6 +47,8 @@ pub trait Read {
 ///
 /// Write is a trait that encapsulates the functionality required to write a stream of bytes.
 pub trait Write {
+    fn get_buffer(&self) -> &Buffer;
+
     // Write a single bit to the underlying stream.
     fn write_bit(&mut self, bit: Bit);
 
@@ -60,8 +62,11 @@ pub trait Write {
 //    fn close(self) -> Box<[u8]>;
 }
 
+pub mod buffer;
+
 pub mod buffered_write;
 pub use self::buffered_write::BufferedWriter;
 
 pub mod buffered_read;
 pub use self::buffered_read::BufferedReader;
+use crate::stream::buffer::Buffer;
