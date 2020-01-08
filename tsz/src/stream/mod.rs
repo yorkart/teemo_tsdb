@@ -2,6 +2,8 @@ use std::{error, fmt};
 
 use crate::Bit;
 
+pub type Buffer = Vec<u8>;
+
 /// Error
 ///
 /// Enum used to represent potential errors when interacting with a stream.
@@ -62,11 +64,8 @@ pub trait Write {
 //    fn close(self) -> Box<[u8]>;
 }
 
-pub mod buffer;
-
 pub mod buffered_write;
 pub use self::buffered_write::BufferedWriter;
 
 pub mod buffered_read;
 pub use self::buffered_read::BufferedReader;
-use crate::stream::buffer::Buffer;

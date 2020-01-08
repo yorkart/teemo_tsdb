@@ -2,7 +2,7 @@
 
 use crate::stream::{Error, Read};
 use super::Bit;
-use crate::stream::buffer::Buffer;
+use crate::stream::Buffer;
 
 /// BufferedReader
 ///

@@ -1,6 +1,6 @@
 use crate::stream::Write;
 use crate::Bit;
-use crate::stream::buffer::Buffer;
+use crate::stream::Buffer;
 
 /// BufferedWriter
 ///

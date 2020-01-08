@@ -3,7 +3,7 @@ use std::mem;
 use crate::encode::Encode;
 use crate::stream::Write;
 use crate::{Bit, DataPoint};
-use crate::stream::buffer::Buffer;
+use crate::stream::Buffer;
 
 // END_MARKER relies on the fact that when we encode the delta of delta for a number that requires
 // more than 12 bits we write four control bits 1111 followed by the 32 bits of the value. Since

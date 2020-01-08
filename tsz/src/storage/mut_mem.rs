@@ -2,7 +2,7 @@ use crate::stream::{BufferedWriter, BufferedReader};
 use std::sync::RwLock;
 use std::collections::HashMap;
 use crate::{DataPoint, StdEncoder, StdDecoder, Encode};
-use crate::stream::buffer::Buffer;
+use crate::stream::Buffer;
 use std::ops::Deref;
 
 #[derive(Debug)]
