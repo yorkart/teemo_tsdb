@@ -99,8 +99,8 @@ impl TS {
         n.encoder.encode(dp);
     }
 
-    pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f : F)
-    where F : FnOnce(StdDecoder<BufferedReader> ) {
+    pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
+        where F: FnOnce(StdDecoder<BufferedReader>) {
         println!("search ts: [{}, {})", begin_time, end_time);
 
         let r = self.append_only_block.read().unwrap();

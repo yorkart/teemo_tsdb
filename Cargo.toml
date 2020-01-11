@@ -9,7 +9,9 @@ edition = "2018"
 [workspace]
 members = [
     "tsz",
+    "net",
 ]
 
 [dependencies]
-tsz = { path="tsz", version="0.1"}
+tsz = {path="tsz", version="0.1"}
+net = {path="net", version="0.1"}

@@ -7,6 +7,28 @@ use tsz::{DataPoint, Decode};
 use std::borrow::Borrow;
 
 fn main() {
+    let mut seen = vec![];
+    let items = vec![vec![1i32, 2], vec![3], vec![1]];
+
+    let a: Vec<_> = items
+        .iter()
+        .flat_map(|inner_numbers| {
+            inner_numbers
+                .iter()
+                .filter_map(|&number|
+                    if !seen.contains(&number) {
+                        seen.push(number);
+                        Some(number)
+                    } else {
+                        None
+                    })
+                .collect::<Vec<_>>()
+                .into_iter()
+        })
+        .collect();
+
+    println!("{:?}", a);
+
     let ts_map = Arc::new(RwLock::new(TSMap::new()));
 
     // writer
