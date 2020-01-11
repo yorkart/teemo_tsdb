@@ -31,6 +31,8 @@ fn main() {
 
     let ts_map = Arc::new(RwLock::new(TSMap::new()));
 
+    net::serve(ts_map.clone());
+
     // writer
     {
         let clone = ts_map.clone();

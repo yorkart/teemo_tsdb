@@ -19,7 +19,7 @@ struct HttpServer {
 
 /// This is our service handler. It receives a Request, routes on its
 /// path, and returns a Future of a Response.
-async fn echo(req: Request<Body>,ts_map: Arc<RwLock<TSMap>>) -> Result<Response<Body>, hyper::Error> {
+async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
         (&Method::GET, "/") => Ok(Response::new(Body::from(
@@ -27,7 +27,7 @@ async fn echo(req: Request<Body>,ts_map: Arc<RwLock<TSMap>>) -> Result<Response<
         ))),
 
         // Simply echo the body back to the client.
-        (&Method::POST, "/echo") => {
+        (&Method::POST, "/append") => {
             let whole_body = hyper::body::aggregate(req).await?;
             let hh = ts_map.read().unwrap();
             let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
@@ -62,30 +62,16 @@ async fn echo(req: Request<Body>,ts_map: Arc<RwLock<TSMap>>) -> Result<Response<
     }
 }
 
-
 //#[tokio::main]
 async fn serve0(ts_map: Arc<RwLock<TSMap>>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = ([0, 0, 0, 0], 8091).into();
-    let a = 1;
-
-//    let make_service = make_service_fn(move |_| {
-//        let client = ts_map.clone();
-//        async move {
-//            Ok::<_, hyper::Error>(
-//                service_fn(move |req| {
-//                    echo(req)
-//                })
-//            )
-//        }
-//    });
 
     let service = make_service_fn(|_conn| {
-//        let b = a;
-        let aa = ts_map.clone();
+        let ts_map_clone_1 = ts_map.clone();
         async move {
             Ok::<_, hyper::Error>(service_fn(move |body| {
-                let bb = aa.clone();
-                echo(body, bb)
+                let ts_map_clone_2 = ts_map_clone_1.clone();
+                echo(body, ts_map_clone_2)
             }))
         }
     });
