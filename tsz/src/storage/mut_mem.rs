@@ -1,6 +1,6 @@
 use crate::stream::{BufferedWriter, BufferedReader};
-use std::sync::RwLock;
-use std::collections::HashMap;
+use std::sync::{RwLock, Arc};
+use std::collections::BTreeMap;
 use crate::{DataPoint, StdEncoder, StdDecoder, Encode};
 use crate::stream::Buffer;
 use std::ops::Deref;
@@ -70,33 +70,35 @@ impl ClosedBlock {
 
 pub struct TS {
     append_only_block: RwLock<AppendOnlyBlock>,
-    closed_blocks: Vec<ClosedBlock>,
+    closed_blocks: RwLock<Vec<ClosedBlock>>,
 }
 
 impl TS {
     pub fn new() -> Self {
         TS {
             append_only_block: RwLock::new(AppendOnlyBlock::new(0, 0)),
-            closed_blocks: Vec::new(),
+            closed_blocks: RwLock::new(Vec::new()),
         }
     }
 
-    pub fn append(&mut self, dp: DataPoint) {
-        let mut n = self.append_only_block.write().unwrap();
-        if n.time_begin == 0 {
-            n.time_begin = dp.time;
-            n.time_end = dp.time + 2 * 60 * 60;
+    pub fn append(&self, dp: DataPoint) {
+        let mut aob = self.append_only_block.write().unwrap();
+        if aob.time_begin == 0 {
+            aob.time_begin = dp.time;
+            aob.time_end = dp.time + 2 * 60 * 60;
         } else {
-            if dp.time > n.time_end {
-                self.closed_blocks.push(
-                    ClosedBlock::new(n.deref())
-                );
-                let time_begin = n.time_end;
+            if dp.time > aob.time_end {
+                {
+                    self.closed_blocks.write().unwrap().push(
+                        ClosedBlock::new(aob.deref())
+                    );
+                }
+                let time_begin = aob.time_end;
                 let time_end = time_begin + 2 * 60 * 60;
-                n.from(AppendOnlyBlock::new(time_begin, time_end));
+                aob.from(AppendOnlyBlock::new(time_begin, time_end));
             }
         }
-        n.encoder.encode(dp);
+        aob.encoder.encode(dp);
     }
 
     pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
@@ -111,15 +113,20 @@ impl TS {
 
 pub struct TSMap {
     rw: RwLock<bool>,
-    ts_map: HashMap<String, TS>,
+    ts_map: BTreeMap<String, TS>,
 }
 
 impl TSMap {
     pub fn new() -> Self {
         TSMap {
             rw: RwLock::new(true),
-            ts_map: HashMap::new(),
+            ts_map: BTreeMap::new(),
         }
+    }
+
+    pub fn get_ts(&self, ts_name: &String) -> Option<&TS> {
+        let _ = self.rw.read().unwrap();
+        self.ts_map.get(ts_name)
     }
 
     pub fn append(&mut self, ts_name: &String, dp: DataPoint) {
@@ -149,5 +156,64 @@ impl TSMap {
     pub fn get(&self, ts_name: &String) -> Option<&TS> {
         let _ = self.rw.read().unwrap();
         self.ts_map.get(ts_name)
+    }
+}
+
+pub type TSTreeMap = RwLock<BTreeMap<String, TS>>;
+
+#[derive(Clone)]
+pub struct BTreeEngine {
+    ts_store: Arc<TSTreeMap>
+}
+
+impl BTreeEngine {
+    pub fn new() -> Self {
+        BTreeEngine {
+            ts_store: Arc::new(TSTreeMap::new(BTreeMap::new()))
+        }
+    }
+
+//    pub fn get_ts(&self, ts_name: &String) -> Option<&TS> {
+//        let store = self.ts_store.read().unwrap();
+//        store.get(ts_name)
+//    }
+
+    pub fn append(&self, ts_name: &String, dp: DataPoint) {
+        // try read
+        {
+            let store = self.ts_store.read().unwrap();
+            match store.get(ts_name) {
+                Some(ts) => {
+                    ts.append(dp);
+                }
+                None => {}
+            }
+        };
+
+        // read check and write
+        {
+            let mut store = self.ts_store.write().unwrap();
+            match store.get(ts_name) {
+                Some(ts) => {
+                    ts.append(dp);
+                }
+                None => {
+                    let ts = TS::new();
+                    ts.append(dp);
+                    store.insert(ts_name.to_string(), ts);
+                }
+            }
+        }
+    }
+
+//    pub fn get(&self, ts_name: &String) -> Option<&TS> {
+//        let store = self.ts_store.read().unwrap();
+//        store.get(ts_name)
+//    }
+}
+
+impl Default for BTreeEngine {
+    fn default() -> Self {
+        Self::new()
     }
 }

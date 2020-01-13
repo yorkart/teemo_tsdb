@@ -12,14 +12,16 @@ use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
 use bytes::buf::BufExt;
 use std::sync::{Arc, RwLock};
 use tsz::storage::mut_mem::TSMap;
+use std::sync::mpsc::SyncSender;
+use tsz::DataPoint;
 
-struct HttpServer {
-    ts_map: Arc<RwLock<TSMap>>,
-}
+//struct HttpServer {
+//    ts_map: Arc<RwLock<TSMap>>,
+//}
 
 /// This is our service handler. It receives a Request, routes on its
 /// path, and returns a Future of a Response.
-async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>) -> Result<Response<Body>, hyper::Error> {
+async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
         (&Method::GET, "/") => Ok(Response::new(Body::from(
@@ -28,8 +30,11 @@ async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>) -> Result<Response
 
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {
+            let d1 = DataPoint::new(1482268055 + 10, 1.24);
+            let _a = tx.send(d1);
+
             let whole_body = hyper::body::aggregate(req).await?;
-            let hh = ts_map.read().unwrap();
+            let _hh = ts_map.read().unwrap();
             let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
 
             let json = serde_json::to_string(&data).expect("");
@@ -63,15 +68,18 @@ async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>) -> Result<Response
 }
 
 //#[tokio::main]
-async fn serve0(ts_map: Arc<RwLock<TSMap>>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn serve0(ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = ([0, 0, 0, 0], 8091).into();
 
     let service = make_service_fn(|_conn| {
         let ts_map_clone_1 = ts_map.clone();
+        let tx_clone_1 = tx.clone();
         async move {
             Ok::<_, hyper::Error>(service_fn(move |body| {
                 let ts_map_clone_2 = ts_map_clone_1.clone();
-                echo(body, ts_map_clone_2)
+                let tx_clone_2 = tx_clone_1.clone();
+
+                echo(body, ts_map_clone_2, tx_clone_2)
             }))
         }
     });
@@ -82,8 +90,8 @@ async fn serve0(ts_map: Arc<RwLock<TSMap>>) -> Result<(), Box<dyn std::error::Er
     Ok(())
 }
 
-pub fn serve(ts_map: Arc<RwLock<TSMap>>) {
+pub fn serve(ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) {
     let _ = tokio::runtime::Runtime::new()
         .unwrap()
-        .block_on(serve0(ts_map));
+        .block_on(serve0(ts_map, tx));
 }

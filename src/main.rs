@@ -1,47 +1,37 @@
 extern crate tsz;
 
-use std::sync::{Arc, RwLock};
-use std::ops::DerefMut;
+use std::sync::{Arc, RwLock, mpsc};
 use tsz::storage::mut_mem::TSMap;
 use tsz::{DataPoint, Decode};
-use std::borrow::Borrow;
+use std::borrow::{Borrow};
+use std::time::Duration;
+use std::sync::mpsc::{SyncSender, Receiver};
 
 fn main() {
-    let mut seen = vec![];
-    let items = vec![vec![1i32, 2], vec![3], vec![1]];
-
-    let a: Vec<_> = items
-        .iter()
-        .flat_map(|inner_numbers| {
-            inner_numbers
-                .iter()
-                .filter_map(|&number|
-                    if !seen.contains(&number) {
-                        seen.push(number);
-                        Some(number)
-                    } else {
-                        None
-                    })
-                .collect::<Vec<_>>()
-                .into_iter()
-        })
-        .collect();
-
-    println!("{:?}", a);
-
     let ts_map = Arc::new(RwLock::new(TSMap::new()));
+    let (tx, rx):(SyncSender<DataPoint>, Receiver<DataPoint>)= mpsc::sync_channel(1000);
 
-    net::serve(ts_map.clone());
+    net::serve(ts_map.clone(), tx.clone());
 
     // writer
     {
         let clone = ts_map.clone();
         std::thread::spawn(move || {
-            let mut map = clone.write().unwrap();
-            let map = map.deref_mut();
+            loop {
+                match rx.try_recv() {
+                    Ok(dp) => {
+                        let mut clone = clone.write().unwrap();
+                        clone.append(String::from("abc").borrow(), dp);
+                    }
+                    Err(_) => {
+                        std::thread::sleep(Duration::from_secs(100));
+                    }
+                }
+            }
 
-            let d1 = DataPoint::new(1482268055 + 10, 1.24);
-            map.append(String::from("abc").borrow(), d1);
+//            let d1 = DataPoint::new(1482268055 + 10, 1.24);
+//            let mut clone = clone.write().unwrap();
+//            clone.append(String::from("abc").borrow(), d1);
         });
     };
 
