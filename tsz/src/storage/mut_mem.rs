@@ -68,16 +68,17 @@ impl ClosedBlock {
     }
 }
 
+#[derive(Clone)]
 pub struct TS {
-    append_only_block: RwLock<AppendOnlyBlock>,
-    closed_blocks: RwLock<Vec<ClosedBlock>>,
+    append_only_block: Arc<RwLock<AppendOnlyBlock>>,
+    closed_blocks: Arc<RwLock<Vec<ClosedBlock>>>,
 }
 
 impl TS {
     pub fn new() -> Self {
         TS {
-            append_only_block: RwLock::new(AppendOnlyBlock::new(0, 0)),
-            closed_blocks: RwLock::new(Vec::new()),
+            append_only_block: Arc::new(RwLock::new(AppendOnlyBlock::new(0, 0))),
+            closed_blocks: Arc::new(RwLock::new(Vec::new())),
         }
     }
 
@@ -108,54 +109,6 @@ impl TS {
         let r = self.append_only_block.read().unwrap();
         let a = r.get_decoder();
         f(a);
-    }
-}
-
-pub struct TSMap {
-    rw: RwLock<bool>,
-    ts_map: BTreeMap<String, TS>,
-}
-
-impl TSMap {
-    pub fn new() -> Self {
-        TSMap {
-            rw: RwLock::new(true),
-            ts_map: BTreeMap::new(),
-        }
-    }
-
-    pub fn get_ts(&self, ts_name: &String) -> Option<&TS> {
-        let _ = self.rw.read().unwrap();
-        self.ts_map.get(ts_name)
-    }
-
-    pub fn append(&mut self, ts_name: &String, dp: DataPoint) {
-        let mut b = false;
-        {
-            let _ = self.rw.read().unwrap();
-            if self.ts_map.contains_key(ts_name) {
-                let ts = self.ts_map.get_mut(ts_name).unwrap();
-                ts.append(dp);
-            } else {
-                b = true;
-            }
-        }
-
-        if b {
-            let _ = self.rw.write().unwrap();
-
-            if !self.ts_map.contains_key(ts_name) {
-                self.ts_map.insert(ts_name.to_string(), TS::new());
-            }
-
-            let ts = self.ts_map.get_mut(ts_name).unwrap();
-            ts.append(dp);
-        }
-    }
-
-    pub fn get(&self, ts_name: &String) -> Option<&TS> {
-        let _ = self.rw.read().unwrap();
-        self.ts_map.get(ts_name)
     }
 }
 
@@ -206,10 +159,17 @@ impl BTreeEngine {
         }
     }
 
-//    pub fn get(&self, ts_name: &String) -> Option<&TS> {
-//        let store = self.ts_store.read().unwrap();
-//        store.get(ts_name)
-//    }
+    pub fn get(&self, ts_name: &String) -> Option<TS> {
+        let store = self.ts_store.read().unwrap();
+        match store.get(ts_name) {
+            Some(ts) => {
+                Some(ts.clone())
+            },
+            None =>{
+                None
+            }
+        }
+    }
 }
 
 impl Default for BTreeEngine {

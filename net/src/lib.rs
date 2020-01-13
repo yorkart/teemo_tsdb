@@ -10,10 +10,10 @@ extern crate serde_json;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
 use bytes::buf::BufExt;
-use std::sync::{Arc, RwLock};
-use tsz::storage::mut_mem::TSMap;
+use tsz::storage::mut_mem::BTreeEngine;
 use std::sync::mpsc::SyncSender;
 use tsz::DataPoint;
+use std::borrow::Borrow;
 
 //struct HttpServer {
 //    ts_map: Arc<RwLock<TSMap>>,
@@ -21,7 +21,7 @@ use tsz::DataPoint;
 
 /// This is our service handler. It receives a Request, routes on its
 /// path, and returns a Future of a Response.
-async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) -> Result<Response<Body>, hyper::Error> {
+async fn echo(req: Request<Body>, ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
         (&Method::GET, "/") => Ok(Response::new(Body::from(
@@ -34,7 +34,8 @@ async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<Da
             let _a = tx.send(d1);
 
             let whole_body = hyper::body::aggregate(req).await?;
-            let _hh = ts_map.read().unwrap();
+            let _hh = ts_map.get(String::from("abc").borrow());
+
             let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
 
             let json = serde_json::to_string(&data).expect("");
@@ -68,7 +69,7 @@ async fn echo(req: Request<Body>, ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<Da
 }
 
 //#[tokio::main]
-async fn serve0(ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn serve0(ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = ([0, 0, 0, 0], 8091).into();
 
     let service = make_service_fn(|_conn| {
@@ -90,7 +91,7 @@ async fn serve0(ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) -> Resul
     Ok(())
 }
 
-pub fn serve(ts_map: Arc<RwLock<TSMap>>, tx : SyncSender<DataPoint>) {
+pub fn serve(ts_map: BTreeEngine, tx : SyncSender<DataPoint>) {
     let _ = tokio::runtime::Runtime::new()
         .unwrap()
         .block_on(serve0(ts_map, tx));

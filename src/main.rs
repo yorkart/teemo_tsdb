@@ -1,26 +1,25 @@
 extern crate tsz;
 
-use std::sync::{Arc, RwLock, mpsc};
-use tsz::storage::mut_mem::TSMap;
+use std::sync::mpsc;
+use tsz::storage::mut_mem::BTreeEngine;
 use tsz::{DataPoint, Decode};
 use std::borrow::{Borrow};
 use std::time::Duration;
 use std::sync::mpsc::{SyncSender, Receiver};
 
 fn main() {
-    let ts_map = Arc::new(RwLock::new(TSMap::new()));
+    let engine = BTreeEngine::new();
     let (tx, rx):(SyncSender<DataPoint>, Receiver<DataPoint>)= mpsc::sync_channel(1000);
 
-    net::serve(ts_map.clone(), tx.clone());
+    net::serve(engine.clone(), tx.clone());
 
     // writer
     {
-        let clone = ts_map.clone();
+        let clone = engine.clone();
         std::thread::spawn(move || {
             loop {
                 match rx.try_recv() {
                     Ok(dp) => {
-                        let mut clone = clone.write().unwrap();
                         clone.append(String::from("abc").borrow(), dp);
                     }
                     Err(_) => {
@@ -38,10 +37,9 @@ fn main() {
     // reader
     let mut threads = Vec::new();
     for num in 0..10 {
-        let clone = ts_map.clone();
+        let clone = engine.clone();
         threads.push(std::thread::spawn(move || {
-            let map = clone.read().unwrap();
-            match map.get(String::from("abc").borrow()) {
+            match clone.get(String::from("abc").borrow()) {
                 Some(ts) => {
                     ts.get_decoder(0, 0, |mut decoder| {
                         loop {
