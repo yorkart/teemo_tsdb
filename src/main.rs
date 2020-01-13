@@ -1,7 +1,7 @@
 extern crate tsz;
 
 use std::sync::mpsc;
-use tsz::storage::mut_mem::BTreeEngine;
+use tsz::storage::BTreeEngine;
 use tsz::{DataPoint, Decode};
 use std::borrow::{Borrow};
 use std::time::Duration;
