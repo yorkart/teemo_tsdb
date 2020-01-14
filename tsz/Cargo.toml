@@ -7,3 +7,4 @@ description = "A crate for time series compression based upon Facebook's Gorilla
 keywords = ["time", "series", "compression", "gorilla"]
 
 [dependencies]
+chrono="0.4"
