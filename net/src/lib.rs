@@ -12,7 +12,7 @@ use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
 use bytes::buf::BufExt;
 use tsz::storage::BTreeEngine;
 use std::sync::mpsc::SyncSender;
-use tsz::DataPoint;
+use tsz::{DataPoint, Decode};
 use std::borrow::Borrow;
 
 //struct HttpServer {
@@ -24,9 +24,25 @@ use std::borrow::Borrow;
 async fn echo(req: Request<Body>, ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
-        (&Method::GET, "/") => Ok(Response::new(Body::from(
-            "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
-        ))),
+        (&Method::GET, "/") => {
+            let ts = ts_map.get(String::from("abc").borrow()).unwrap();
+            ts.get_decoder(0, 1, |mut decoder| {
+                loop {
+                    match decoder.next() {
+                        Ok(dp) => {
+                            println!("reader => {}, {}",  dp.time, dp.value);
+                        }
+                        Err(_) => {
+                            break;
+                        }
+                    }
+                }
+            });
+            Ok(Response::new(Body::from(
+                "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
+            ))
+            )
+        },
 
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {

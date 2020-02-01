@@ -2,6 +2,10 @@ use crate::stream::{BufferedWriter, BufferedReader};
 use crate::{StdEncoder, StdDecoder};
 use crate::stream::Buffer;
 
+pub trait Block {
+    fn get_decoder(&self) -> StdDecoder<BufferedReader>;
+}
+
 #[derive(Debug)]
 pub struct AppendOnlyBlock {
     pub time_begin: u64,
@@ -22,24 +26,20 @@ impl AppendOnlyBlock {
         }
     }
 
-    pub fn from(&mut self, other: AppendOnlyBlock) {
-        self.time_begin = other.time_begin;
-        self.time_end = other.time_end;
-        self.encoder = other.encoder;
+    pub fn get_buffer(&self) -> &Buffer {
+        self.encoder.get_buffer()
     }
+}
 
-    pub fn get_decoder(&self) -> StdDecoder<BufferedReader> {
+impl Block for AppendOnlyBlock {
+    fn get_decoder(&self) -> StdDecoder<BufferedReader> {
         let reader = BufferedReader::new(self.encoder.get_buffer());
         StdDecoder::new(reader)
     }
 
-    pub fn len(&self) -> u64 {
-        self.encoder.get_size()
-    }
-
-    pub fn get_buffer(&self) -> &Buffer {
-        self.encoder.get_buffer()
-    }
+//    pub fn len(&self) -> u64 {
+//        self.encoder.get_size()
+//    }
 }
 
 #[derive(Debug)]
@@ -58,8 +58,10 @@ impl ClosedBlock {
             bytes,
         }
     }
+}
 
-    pub fn get_decoder(&self) -> StdDecoder<BufferedReader> {
+impl Block for ClosedBlock {
+    fn get_decoder(&self) -> StdDecoder<BufferedReader> {
         let reader = BufferedReader::new(self.bytes.as_ref());
         StdDecoder::new(reader)
     }
