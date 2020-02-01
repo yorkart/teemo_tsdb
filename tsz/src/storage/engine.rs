@@ -1,19 +1,19 @@
-use std::sync::{RwLock, Arc};
 use std::collections::BTreeMap;
 use crate::DataPoint;
 use crate::storage::ts::TS;
+use common::{SharedRwLock, new_shared_rw_lock};
 
-pub type TSTreeMap = RwLock<BTreeMap<String, TS>>;
+pub type TSTreeMap = BTreeMap<String, TS>;
 
 #[derive(Clone)]
 pub struct BTreeEngine {
-    ts_store: Arc<TSTreeMap>
+    ts_store: SharedRwLock<TSTreeMap>,
 }
 
 impl BTreeEngine {
     pub fn new() -> Self {
         BTreeEngine {
-            ts_store: Arc::new(TSTreeMap::new(BTreeMap::new()))
+            ts_store: new_shared_rw_lock(BTreeMap::new())
         }
     }
 

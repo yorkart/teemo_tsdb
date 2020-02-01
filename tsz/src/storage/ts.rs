@@ -1,21 +1,21 @@
-use std::sync::{RwLock, Arc};
 use std::ops::Deref;
 use crate::{DataPoint, Encode, StdDecoder};
 use crate::stream::BufferedReader;
 use crate::storage::block::{AppendOnlyBlock, ClosedBlock};
+use common::{SharedRwLock, new_shared_rw_lock};
 
 #[derive(Clone)]
 pub struct TS {
-    append_only_block: Arc<RwLock<AppendOnlyBlock>>,
-    closed_blocks: Arc<RwLock<Vec<ClosedBlock>>>,
+    append_only_block: SharedRwLock<AppendOnlyBlock>,
+    closed_blocks: SharedRwLock<Vec<ClosedBlock>>,
     period: u64,
 }
 
 impl TS {
     pub fn new() -> Self {
         TS {
-            append_only_block: Arc::new(RwLock::new(AppendOnlyBlock::new(0, 0))),
-            closed_blocks: Arc::new(RwLock::new(Vec::new())),
+            append_only_block: new_shared_rw_lock(AppendOnlyBlock::new(0, 0)),
+            closed_blocks: new_shared_rw_lock(Vec::new()),
             period: 2 * 60 * 60,
         }
     }
@@ -91,6 +91,6 @@ mod tests {
                      end_dt.format("%Y-%m-%d %T%z"));
         }
 
-        ts.get_decoder(0,0 , || {})
+        ts.get_decoder(0,0 , |_| {})
     }
 }
