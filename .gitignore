@@ -18,3 +18,5 @@ Cargo.lock
 
 cmake-build-debug
 cmake-build-release
+
+.vscode
