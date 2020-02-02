@@ -8,14 +8,14 @@ edition = "2018"
 
 [workspace]
 members = [
-    "common",
-    "tsz",
-    "net",
+    "components/common",
+    "components/tsz",
+    "components/net",
 ]
 
 [dependencies]
-common = {path="common", version="0.1"}
-tsz = {path="tsz", version="0.1"}
-net = {path="net", version="0.1"}
+common = {path="components/common", version="0.1"}
+tsz = {path="components/tsz", version="0.1"}
+net = {path="components/net", version="0.1"}
 
 rocksdb = "0.13"
