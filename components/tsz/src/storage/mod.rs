@@ -12,10 +12,9 @@ pub struct Raw {
 }
 
 pub fn new_btree_engine() -> BTreeEngine {
-    let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
     let (bg_tx, bg_rx) = std::sync::mpsc::sync_channel(10);
 
-    let engine = BTreeEngine::new(data_tx, bg_tx);
+    let engine = BTreeEngine::new(bg_tx);
 
     // background thread
     std::thread::spawn(move || {
@@ -35,22 +34,6 @@ pub fn new_btree_engine() -> BTreeEngine {
             }
         }
     });
-
-    // sequence write thread
-    let clone = engine.clone();
-    std::thread::spawn(move || {
-        loop {
-            match data_rx.try_recv() {
-                Ok(raw) => {
-                    clone.append(raw);
-                }
-                Err(_) => {
-                    std::thread::sleep(Duration::from_secs(100));
-                }
-            }
-        }
-    });
-
 
     engine
 }

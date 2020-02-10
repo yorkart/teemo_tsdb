@@ -8,15 +8,13 @@ pub type TSTreeMap = BTreeMap<String, TS>;
 #[derive(Clone)]
 pub struct BTreeEngine {
     ts_store: common::SharedRwLock<TSTreeMap>,
-    data_channel_tx: SyncSender<Raw>,
     background_task_tx: SyncSender<TS>,
 }
 
 impl BTreeEngine {
-    pub fn new(data_channel_tx: SyncSender<Raw>, background_task_tx: SyncSender<TS>) -> Self {
+    pub fn new(background_task_tx: SyncSender<TS>) -> Self {
         BTreeEngine {
             ts_store: common::new_shared_rw_lock(BTreeMap::new()),
-            data_channel_tx,
             background_task_tx,
         }
     }
@@ -33,32 +31,13 @@ impl BTreeEngine {
         }
     }
 
-    // todo by ts_name write
-    pub fn append_async(&self, raw: Raw) {
-        self.data_channel_tx.send(raw).unwrap();
-    }
-
     pub fn append(&self, raw: Raw) {
-        // try read
-        {
-            let store = self.ts_store.read().unwrap();
-            match store.get(&raw.table_name) {
-                Some(ts) => {
-                    ts.append(raw.dp);
-                }
-                None => {}
+        let store = self.ts_store.read().unwrap();
+        match store.get(&raw.table_name) {
+            Some(ts) => {
+                ts.append_async(raw.dp);
             }
-        };
-
-        // read check and write
-        {
-            let store = self.ts_store.write().unwrap();
-            match store.get(&raw.table_name) {
-                Some(ts) => {
-                    ts.append(raw.dp);
-                }
-                None => {}
-            }
+            None => {}
         }
     }
 

@@ -2,40 +2,8 @@ use std::ops::DerefMut;
 use crate::{DataPoint, Encode, StdDecoder};
 use crate::stream::BufferedReader;
 use crate::storage::block::{AppendOnlyBlock, ClosedBlock, Block};
-//use std::sync::mpsc::SyncSender;
-//use std::time::Duration;
-
-//#[derive(Clone)]
-//pub struct TSStorage {
-//    ts: TS,
-//    data_channel_tx: SyncSender<DataPoint>,
-//}
-//
-//impl TSStorage {
-//    pub fn new() -> Self {
-//        let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
-//        let s = TSStorage {
-//            ts: TS::new(),
-//            data_channel_tx: data_tx,
-//        };
-//
-//        let clone = s.clone();
-//        std::thread::spawn(move || {
-//            loop {
-//                match data_rx.try_recv() {
-//                    Ok(dp) => {
-//                        clone.append(dp);
-//                    }
-//                    Err(_) => {
-//                        std::thread::sleep(Duration::from_secs(100));
-//                    }
-//                }
-//            }
-//        });
-//
-//        s
-//    }
-//}
+use std::time::Duration;
+use std::sync::mpsc::{SyncSender, Receiver};
 
 #[derive(Clone)]
 pub struct TS {
@@ -43,16 +11,49 @@ pub struct TS {
     closed_blocks: common::SharedRwLockVec<ClosedBlock>,
     period: u64,
     timer_guard: Option<timer::Guard>,
+    data_tx: SyncSender<DataPoint>,
+    close: bool,
 }
 
 impl TS {
     pub fn new() -> Self {
-        TS {
+        let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
+
+        let ts = TS {
             append_only_blocks: common::new_shared_rw_lock_vec(), // new_shared_rw_lock(AppendOnlyBlock::new(0, 0)),
             closed_blocks: common::new_shared_rw_lock_vec(),
             period: 2 * 60 * 60,
             timer_guard: None,
-        }
+            data_tx,
+            close: false,
+        };
+
+        ts.table_consumer(data_rx);
+        ts
+    }
+
+    pub fn set_close(&mut self) {
+        self.close = true;
+    }
+
+    fn table_consumer(&self, data_rx: Receiver<DataPoint>) {
+        let clone = self.clone();
+        std::thread::spawn(move || {
+            loop {
+                if clone.close {
+                    break;
+                }
+
+                match data_rx.try_recv() {
+                    Ok(raw) => {
+                        clone.append(raw);
+                    }
+                    Err(_) => {
+                        std::thread::sleep(Duration::from_secs(1));
+                    }
+                }
+            }
+        });
     }
 
     pub fn set_timer_guard(&mut self, guard: timer::Guard) {
@@ -84,6 +85,11 @@ impl TS {
             }
             None => {}
         }
+    }
+
+    // todo error logic
+    pub fn append_async(&self, dp: DataPoint) {
+        self.data_tx.send(dp).unwrap();
     }
 
     pub fn append(&self, dp: DataPoint) {

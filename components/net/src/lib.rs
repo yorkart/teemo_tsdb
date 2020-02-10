@@ -46,7 +46,7 @@ async fn echo(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Bod
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {
             let d1 = DataPoint::new(1482268055 + 10, 1.24);
-            let _a = ts_engine.append_async(Raw { table_name: String::from("table_name"), dp: d1 });
+            let _a = ts_engine.append(Raw { table_name: String::from("table_name"), dp: d1 });
 
             let whole_body = hyper::body::aggregate(req).await?;
             let _hh = ts_engine.get(String::from("abc").borrow());
