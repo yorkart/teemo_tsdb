@@ -4,13 +4,18 @@ mod engine;
 
 pub use engine::BTreeEngine;
 use std::time::Duration;
-use std::borrow::Borrow;
+use crate::DataPoint;
 
-pub fn new_btree_engine(name: String) -> BTreeEngine {
+pub struct Raw {
+    pub table_name: String,
+    pub dp: DataPoint,
+}
+
+pub fn new_btree_engine() -> BTreeEngine {
     let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
     let (bg_tx, bg_rx) = std::sync::mpsc::sync_channel(10);
 
-    let engine = BTreeEngine::new(name, data_tx, bg_tx);
+    let engine = BTreeEngine::new(data_tx, bg_tx);
 
     // background thread
     std::thread::spawn(move || {
@@ -36,8 +41,8 @@ pub fn new_btree_engine(name: String) -> BTreeEngine {
     std::thread::spawn(move || {
         loop {
             match data_rx.try_recv() {
-                Ok(dp) => {
-                    clone.append(String::from("table_name").borrow(), dp);
+                Ok(raw) => {
+                    clone.append(raw);
                 }
                 Err(_) => {
                     std::thread::sleep(Duration::from_secs(100));

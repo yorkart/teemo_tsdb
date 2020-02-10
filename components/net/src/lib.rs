@@ -10,7 +10,7 @@ extern crate serde_json;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
 use bytes::buf::BufExt;
-use tsz::storage::BTreeEngine;
+use tsz::storage::{BTreeEngine, Raw};
 use tsz::{DataPoint, Decode};
 use std::borrow::Borrow;
 
@@ -29,7 +29,7 @@ async fn echo(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Bod
                 loop {
                     match decoder.next() {
                         Ok(dp) => {
-                            println!("reader => {}, {}",  dp.time, dp.value);
+                            println!("reader => {}, {}", dp.time, dp.value);
                         }
                         Err(_) => {
                             break;
@@ -41,12 +41,12 @@ async fn echo(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Bod
                 "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
             ))
             )
-        },
+        }
 
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {
             let d1 = DataPoint::new(1482268055 + 10, 1.24);
-            let _a = ts_engine.append_async(String::from("table_name").borrow(), d1);
+            let _a = ts_engine.append_async(Raw { table_name: String::from("table_name"), dp: d1 });
 
             let whole_body = hyper::body::aggregate(req).await?;
             let _hh = ts_engine.get(String::from("abc").borrow());

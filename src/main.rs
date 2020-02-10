@@ -1,11 +1,12 @@
 extern crate tsz;
 
 use tsz::storage::new_btree_engine;
-use tsz::{ Decode};
+use tsz::Decode;
 use std::borrow::Borrow;
 
 fn main() {
-    let engine = new_btree_engine(String::from("table_name"));
+    let engine = new_btree_engine();
+    engine.create_table(String::from("table_name"));
 
     net::serve(engine.clone());
 
