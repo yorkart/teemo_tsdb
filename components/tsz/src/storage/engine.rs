@@ -8,7 +8,6 @@ pub type TSTreeMap = BTreeMap<String, TS>;
 #[derive(Clone)]
 pub struct BTreeEngine {
     ts_store: common::SharedRwLock<TSTreeMap>,
-    //    timer: SharedRwLock<timer::Timer>,
     data_channel_tx: SyncSender<Raw>,
     background_task_tx: SyncSender<TS>,
 }
@@ -17,7 +16,6 @@ impl BTreeEngine {
     pub fn new(data_channel_tx: SyncSender<Raw>, background_task_tx: SyncSender<TS>) -> Self {
         BTreeEngine {
             ts_store: common::new_shared_rw_lock(BTreeMap::new()),
-//            timer: new_shared_rw_lock(timer::Timer::new()),
             data_channel_tx,
             background_task_tx,
         }
