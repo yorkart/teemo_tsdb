@@ -1,7 +1,11 @@
 
 pub mod shared_lock;
+
 pub use shared_lock::SharedRwLock;
 pub use shared_lock::new_shared_rw_lock;
+
+pub use shared_lock::SharedRwLockVec;
+pub use shared_lock::new_shared_rw_lock_vec;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 

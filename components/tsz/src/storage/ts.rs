@@ -2,27 +2,61 @@ use std::ops::DerefMut;
 use crate::{DataPoint, Encode, StdDecoder};
 use crate::stream::BufferedReader;
 use crate::storage::block::{AppendOnlyBlock, ClosedBlock, Block};
+//use std::sync::mpsc::SyncSender;
+//use std::time::Duration;
 
-pub type SharedRwLockVec<T> = common::SharedRwLock<Vec<T>>;
-
-fn new_shared_rw_lock_vec<T>() -> SharedRwLockVec<T> where T: Block {
-    common::new_shared_rw_lock(Vec::new())
-}
+//#[derive(Clone)]
+//pub struct TSStorage {
+//    ts: TS,
+//    data_channel_tx: SyncSender<DataPoint>,
+//}
+//
+//impl TSStorage {
+//    pub fn new() -> Self {
+//        let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
+//        let s = TSStorage {
+//            ts: TS::new(),
+//            data_channel_tx: data_tx,
+//        };
+//
+//        let clone = s.clone();
+//        std::thread::spawn(move || {
+//            loop {
+//                match data_rx.try_recv() {
+//                    Ok(dp) => {
+//                        clone.append(dp);
+//                    }
+//                    Err(_) => {
+//                        std::thread::sleep(Duration::from_secs(100));
+//                    }
+//                }
+//            }
+//        });
+//
+//        s
+//    }
+//}
 
 #[derive(Clone)]
 pub struct TS {
-    append_only_blocks: SharedRwLockVec<AppendOnlyBlock>,
-    closed_blocks: SharedRwLockVec<ClosedBlock>,
+    append_only_blocks: common::SharedRwLockVec<AppendOnlyBlock>,
+    closed_blocks: common::SharedRwLockVec<ClosedBlock>,
     period: u64,
+    timer_guard: Option<timer::Guard>,
 }
 
 impl TS {
     pub fn new() -> Self {
         TS {
-            append_only_blocks: new_shared_rw_lock_vec(), // new_shared_rw_lock(AppendOnlyBlock::new(0, 0)),
-            closed_blocks: new_shared_rw_lock_vec(),
+            append_only_blocks: common::new_shared_rw_lock_vec(), // new_shared_rw_lock(AppendOnlyBlock::new(0, 0)),
+            closed_blocks: common::new_shared_rw_lock_vec(),
             period: 2 * 60 * 60,
+            timer_guard: None,
         }
+    }
+
+    pub fn set_timer_guard(&mut self, guard: timer::Guard) {
+        self.timer_guard = Some(guard);
     }
 
     /// check and roll down append_only_block to closed_block

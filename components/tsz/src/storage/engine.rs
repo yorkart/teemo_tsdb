@@ -1,20 +1,33 @@
 use std::collections::BTreeMap;
 use crate::DataPoint;
 use crate::storage::ts::TS;
-use common::{SharedRwLock, new_shared_rw_lock};
+use std::sync::mpsc::SyncSender;
 
 pub type TSTreeMap = BTreeMap<String, TS>;
 
 #[derive(Clone)]
 pub struct BTreeEngine {
-    ts_store: SharedRwLock<TSTreeMap>,
+    name: String,
+    ts_store: common::SharedRwLock<TSTreeMap>,
+    //    timer: SharedRwLock<timer::Timer>,
+    data_channel_tx: SyncSender<DataPoint>,
+    background_task_tx: SyncSender<TS>,
 }
 
 impl BTreeEngine {
-    pub fn new() -> Self {
+    pub fn new(name: String, data_channel_tx: SyncSender<DataPoint>, background_task_tx: SyncSender<TS>) -> Self {
         BTreeEngine {
-            ts_store: new_shared_rw_lock(BTreeMap::new())
+            name,
+            ts_store: common::new_shared_rw_lock(BTreeMap::new()),
+//            timer: new_shared_rw_lock(timer::Timer::new()),
+            data_channel_tx,
+            background_task_tx,
         }
+    }
+
+    // todo by ts_name write
+    pub fn append_async(&self, ts_name: &String, dp: DataPoint) {
+        self.data_channel_tx.send(dp).unwrap();
     }
 
     pub fn append(&self, ts_name: &String, dp: DataPoint) {
@@ -38,6 +51,16 @@ impl BTreeEngine {
                 }
                 None => {
                     let ts = TS::new();
+                    self.background_task_tx.send(ts.clone()).unwrap();
+//                    let guard = {
+//                        let ts_clone = ts.clone();
+//                        self.timer.read().unwrap().schedule_repeating(chrono::Duration::minutes(1), move || {
+//                            ts_clone.roll_down(1000 * 60 * 60);
+//                        })
+//                    };
+//
+//                    ts.set_timer_guard(guard);
+
                     ts.append(dp);
                     store.insert(ts_name.to_string(), ts);
                 }
@@ -50,16 +73,16 @@ impl BTreeEngine {
         match store.get(ts_name) {
             Some(ts) => {
                 Some(ts.clone())
-            },
-            None =>{
+            }
+            None => {
                 None
             }
         }
     }
 }
 
-impl Default for BTreeEngine {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+//impl Default for BTreeEngine {
+//    fn default() -> Self {
+//        Self::new()
+//    }
+//}

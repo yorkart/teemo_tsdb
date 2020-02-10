@@ -1,38 +1,13 @@
 extern crate tsz;
 
-use std::sync::mpsc;
-use tsz::storage::BTreeEngine;
-use tsz::{DataPoint, Decode};
-use std::borrow::{Borrow};
-use std::time::Duration;
-use std::sync::mpsc::{SyncSender, Receiver};
+use tsz::storage::new_btree_engine;
+use tsz::{ Decode};
+use std::borrow::Borrow;
 
 fn main() {
-    let engine = BTreeEngine::new();
-    let (tx, rx):(SyncSender<DataPoint>, Receiver<DataPoint>)= mpsc::sync_channel(1000);
+    let engine = new_btree_engine(String::from("table_name"));
 
-    net::serve(engine.clone(), tx.clone());
-
-    // writer
-    {
-        let clone = engine.clone();
-        std::thread::spawn(move || {
-            loop {
-                match rx.try_recv() {
-                    Ok(dp) => {
-                        clone.append(String::from("abc").borrow(), dp);
-                    }
-                    Err(_) => {
-                        std::thread::sleep(Duration::from_secs(100));
-                    }
-                }
-            }
-
-//            let d1 = DataPoint::new(1482268055 + 10, 1.24);
-//            let mut clone = clone.write().unwrap();
-//            clone.append(String::from("abc").borrow(), d1);
-        });
-    };
+    net::serve(engine.clone());
 
     // reader
     let mut threads = Vec::new();

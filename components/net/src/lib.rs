@@ -11,7 +11,6 @@ use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
 use bytes::buf::BufExt;
 use tsz::storage::BTreeEngine;
-use std::sync::mpsc::SyncSender;
 use tsz::{DataPoint, Decode};
 use std::borrow::Borrow;
 
@@ -21,11 +20,11 @@ use std::borrow::Borrow;
 
 /// This is our service handler. It receives a Request, routes on its
 /// path, and returns a Future of a Response.
-async fn echo(req: Request<Body>, ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<Response<Body>, hyper::Error> {
+async fn echo(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
         (&Method::GET, "/") => {
-            let ts = ts_map.get(String::from("abc").borrow()).unwrap();
+            let ts = ts_engine.get(String::from("abc").borrow()).unwrap();
             ts.get_decoder(0, 1, |mut decoder| {
                 loop {
                     match decoder.next() {
@@ -47,10 +46,10 @@ async fn echo(req: Request<Body>, ts_map: BTreeEngine, tx : SyncSender<DataPoint
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {
             let d1 = DataPoint::new(1482268055 + 10, 1.24);
-            let _a = tx.send(d1);
+            let _a = ts_engine.append_async(String::from("table_name").borrow(), d1);
 
             let whole_body = hyper::body::aggregate(req).await?;
-            let _hh = ts_map.get(String::from("abc").borrow());
+            let _hh = ts_engine.get(String::from("abc").borrow());
 
             let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
 
@@ -85,18 +84,16 @@ async fn echo(req: Request<Body>, ts_map: BTreeEngine, tx : SyncSender<DataPoint
 }
 
 //#[tokio::main]
-async fn serve0(ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+async fn serve0(ts_engine: BTreeEngine) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = ([0, 0, 0, 0], 8091).into();
 
     let service = make_service_fn(|_conn| {
-        let ts_map_clone_1 = ts_map.clone();
-        let tx_clone_1 = tx.clone();
+        let ts_engine_clone_1 = ts_engine.clone();
         async move {
             Ok::<_, hyper::Error>(service_fn(move |body| {
-                let ts_map_clone_2 = ts_map_clone_1.clone();
-                let tx_clone_2 = tx_clone_1.clone();
+                let ts_engine_clone_2 = ts_engine_clone_1.clone();
 
-                echo(body, ts_map_clone_2, tx_clone_2)
+                echo(body, ts_engine_clone_2)
             }))
         }
     });
@@ -107,8 +104,8 @@ async fn serve0(ts_map: BTreeEngine, tx : SyncSender<DataPoint>) -> Result<(), B
     Ok(())
 }
 
-pub fn serve(ts_map: BTreeEngine, tx : SyncSender<DataPoint>) {
+pub fn serve(ts_engine: BTreeEngine) {
     let _ = tokio::runtime::Runtime::new()
         .unwrap()
-        .block_on(serve0(ts_map, tx));
+        .block_on(serve0(ts_engine));
 }

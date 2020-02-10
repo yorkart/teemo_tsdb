@@ -10,3 +10,4 @@ keywords = ["time", "series", "compression", "gorilla"]
 common = {path="../common", version="0.1"}
 
 chrono="0.4"
+timer="0.2"
