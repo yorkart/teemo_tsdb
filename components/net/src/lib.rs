@@ -39,14 +39,13 @@ async fn echo(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Bod
             });
             Ok(Response::new(Body::from(
                 "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
-            ))
-            )
+            )))
         }
 
         // Simply echo the body back to the client.
         (&Method::POST, "/append") => {
-            let d1 = DataPoint::new(1482268055 + 10, 1.24);
-            let _a = ts_engine.append(Raw { table_name: String::from("table_name"), dp: d1 });
+            let dp = DataPoint::new(1482268055 + 10, 1.24);
+            ts_engine.append(Raw { table_name: String::from("table_name"), dp });
 
             let whole_body = hyper::body::aggregate(req).await?;
             let _hh = ts_engine.get(String::from("abc").borrow());
