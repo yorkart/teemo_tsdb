@@ -10,6 +10,7 @@ keywords = ["time", "series", "compression", "gorilla"]
 nightly = []
 
 [dependencies]
+common = {path="../common", version="0.1"}
 tsz = {path="../tsz", version="0.1"}
 
 bytes = "0.5"

@@ -4,9 +4,10 @@ use std::sync::mpsc::{SyncSender, Receiver};
 use std::time::Duration;
 use crate::DataPoint;
 
+#[derive(Debug)]
 pub struct Raw {
     pub table_name: String,
-    pub dp: DataPoint,
+    pub data_point: DataPoint,
 }
 
 pub type TSTreeMap = BTreeMap<String, TS>;
@@ -53,9 +54,11 @@ impl BTreeEngine {
         match store.get(ts_name.as_str()) {
             Some(_) => {}
             None => {
-                let ts = TS::new();
+                let ts = TS::new(100000);
                 self.background_task_tx.send(ts.clone()).unwrap();
                 store.insert(ts_name.to_string(), ts);
+
+                println!("create table : {}", ts_name);
             }
         }
     }
@@ -64,7 +67,7 @@ impl BTreeEngine {
         let store = self.ts_store.read().unwrap();
         match store.get(&raw.table_name) {
             Some(ts) => {
-                ts.append_async(raw.dp);
+                ts.append_async(raw.data_point);
             }
             None => {}
         }

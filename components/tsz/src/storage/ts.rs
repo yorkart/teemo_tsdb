@@ -16,8 +16,8 @@ pub struct TS {
 }
 
 impl TS {
-    pub fn new() -> Self {
-        let (data_tx, data_rx) = std::sync::mpsc::sync_channel(100000);
+    pub fn new(buffer_size: usize) -> Self {
+        let (data_tx, data_rx) = std::sync::mpsc::sync_channel(buffer_size);
 
         let ts = TS {
             append_only_blocks: common::new_shared_rw_lock_vec(), // new_shared_rw_lock(AppendOnlyBlock::new(0, 0)),
@@ -40,15 +40,14 @@ impl TS {
         let clone = self.clone();
         std::thread::spawn(move || {
             loop {
-                if clone.close {
-                    break;
-                }
-
                 match data_rx.try_recv() {
                     Ok(raw) => {
                         clone.append(raw);
                     }
                     Err(_) => {
+                        if clone.close {
+                            break;
+                        }
                         std::thread::sleep(Duration::from_secs(1));
                     }
                 }
@@ -96,20 +95,28 @@ impl TS {
         let mut append_only_blocks = self.append_only_blocks.write().unwrap();
         let append_only_blocks = append_only_blocks.deref_mut();
 
+        // no active block
         if append_only_blocks.len() == 0 {
             let (begin_ts, end_ts) = self.time_align(dp.time, self.period);
             append_only_blocks.push(AppendOnlyBlock::new(begin_ts, end_ts));
+            println!("create AppendOnlyBlock {},{} [{}/{}]",
+                     begin_ts,
+                     end_ts,
+                     common::timestamp_sec_to_string(begin_ts),
+                     common::timestamp_sec_to_string(end_ts));
             return;
         }
 
-        let star_time = append_only_blocks.get(0).unwrap().time_begin;
+        let start_time = append_only_blocks.get(0).unwrap().time_begin;
 //        let end_time = append_only_blocks.get(append_only_blocks.len() - 1).unwrap().time_end;
 
-        if dp.time < star_time {
+        if dp.time < start_time {
+            println!("skip old DataPoint: {}", dp.time);
             // skip old data point.
             return;
         }
 
+        // find block with time range and encode DataPoint
         for i in 0..append_only_blocks.len() {
             let aob = append_only_blocks.get_mut(i).unwrap();
             if dp.time >= aob.time_begin && dp.time < aob.time_end {
@@ -118,8 +125,12 @@ impl TS {
             }
         }
 
+        // if not find, create new block and encode DataPoint
         let (begin_ts, end_ts) = self.time_align(dp.time, self.period);
-        let aob = AppendOnlyBlock::new(begin_ts, end_ts);
+        let mut aob = AppendOnlyBlock::new(begin_ts, end_ts);
+        aob.encoder.encode(dp);
+
+        // find the index by time and insert block into append_only_blocks
         for i in 0..append_only_blocks.len() {
             if begin_ts < append_only_blocks.get(i).unwrap().time_begin {
                 append_only_blocks.insert(i, aob);
@@ -130,7 +141,7 @@ impl TS {
 
     pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
         where F: Fn(StdDecoder<BufferedReader>) {
-        println!("search ts: [{}, {})", begin_time, end_time);
+        println!("search ts: [{},{})", begin_time, end_time);
 
         let r = self.append_only_blocks.read().unwrap();
         for block in r.iter() {
@@ -155,7 +166,7 @@ mod tests {
 
     #[test]
     fn time_align_test() {
-        let ts = TS::new();
+        let ts = TS::new(1000);
         {
 // Tue Jan 14 2020 08:02:26 GMT+0800
             let timestamp = 1578960146;
