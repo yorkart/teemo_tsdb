@@ -1,0 +1,13 @@
+[package]
+name = "tsz-rs"
+version = "0.1.0"
+authors = ["wangyue1 <wangyue1@ly.com>"]
+edition = "2018"
+description = "A crate for time series compression based upon Facebook's Gorilla whitepaper"
+keywords = ["time", "series", "compression", "gorilla"]
+
+[dependencies]
+common = {path="../common", version="0.1"}
+
+chrono="0.4"
+timer="0.2"
