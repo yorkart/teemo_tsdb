@@ -22,4 +22,7 @@ tszv1 = {path="components/tszv1", version="0.1"}
 engine = {path="components/engine", version="0.1"}
 net = {path="components/net", version="0.1"}
 
+log = "0.4"
+log4rs = "0.10"
+
 rocksdb = "0.13"

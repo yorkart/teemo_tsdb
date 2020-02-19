@@ -1,11 +1,12 @@
 use bytes::buf::BufExt;
-use engine::{BTreeEngine, Engine};
+use engine::Engine;
 use hyper::{header, Body, Request, Response, StatusCode};
 use serde_json::json;
+use std::sync::Arc;
 
 pub async fn create_table(
     req: Request<Body>,
-    ts_engine: BTreeEngine,
+    ts_engine: Arc<Box<dyn Engine + Send + Sync>>,
 ) -> Result<Response<Body>, hyper::Error> {
     let whole_body = hyper::body::aggregate(req).await?;
 

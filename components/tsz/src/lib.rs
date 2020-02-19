@@ -3,6 +3,10 @@
 //! `tsz` provides functionality for compressing a stream of `DataPoint`s, which are composed of a
 //! time and value, into bytes, and decompressing a stream of bytes into `DataPoint`s.
 
+#[macro_use]
+extern crate log;
+extern crate log4rs;
+
 /// Bit
 ///
 /// An enum used to represent a single bit, can be either `Zero` or `One`.
@@ -60,12 +64,12 @@ pub use self::decode::Decode;
 
 #[cfg(test)]
 mod tests {
+    use std::ops::{Deref, DerefMut};
     use std::sync::{Arc, RwLock};
-    use std::ops::{DerefMut, Deref};
 
     #[test]
     fn serde_test() {
-        let bytes : Vec<u8> = Vec::new();
+        let bytes: Vec<u8> = Vec::new();
         let rw = RwLock::new(bytes);
         let bytes_rw = Arc::new(rw);
 
@@ -77,23 +81,23 @@ mod tests {
                 let a = a.deref_mut();
                 a.push(1);
 
-//                let writer = BufferedWriter::new(bytes.as_mut());
-//                let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
-//                let mut encoder = StdEncoder::new(start_time, writer);
-//
-//                let d1 = DataPoint::new(1482268055 + 10, 1.24);
-//                let d2 = DataPoint::new(1482268055 + 20, 1.98);
-//                let d3 = DataPoint::new(1482268055 + 32, 2.37);
-//                let d4 = DataPoint::new(1482268055 + 44, -7.41);
-//                let d5 = DataPoint::new(1482268055 + 52, 103.50);
-//
-//                encoder.encode(d1);
-//                encoder.encode(d2);
-//                encoder.encode(d3);
-//                encoder.encode(d4);
-//                encoder.encode(d5);
-//
-//                encoder.close();
+                //                let writer = BufferedWriter::new(bytes.as_mut());
+                //                let start_time = 1482268055; // 2016-12-20T21:07:35+00:00
+                //                let mut encoder = StdEncoder::new(start_time, writer);
+                //
+                //                let d1 = DataPoint::new(1482268055 + 10, 1.24);
+                //                let d2 = DataPoint::new(1482268055 + 20, 1.98);
+                //                let d3 = DataPoint::new(1482268055 + 32, 2.37);
+                //                let d4 = DataPoint::new(1482268055 + 44, -7.41);
+                //                let d5 = DataPoint::new(1482268055 + 52, 103.50);
+                //
+                //                encoder.encode(d1);
+                //                encoder.encode(d2);
+                //                encoder.encode(d3);
+                //                encoder.encode(d4);
+                //                encoder.encode(d5);
+                //
+                //                encoder.close();
             });
         };
 
@@ -106,10 +110,10 @@ mod tests {
                 let n = a.get(0).expect("abc");
                 println!("{} => {}", num, n);
 
-//                let reader = BufferedReader::new(bytes_clone.as_ref());
-//                let mut decoder = StdDecoder::new(reader);
-//                let dp = decoder.next().unwrap();
-//                println!("{}: {},{}", num, dp.time, dp.value);
+                //                let reader = BufferedReader::new(bytes_clone.as_ref());
+                //                let mut decoder = StdDecoder::new(reader);
+                //                let dp = decoder.next().unwrap();
+                //                println!("{}: {},{}", num, dp.time, dp.value);
             }));
         }
 

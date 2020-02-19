@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate log;
+extern crate log4rs;
+
 mod block;
 mod engine;
 mod ts;
@@ -26,9 +30,7 @@ pub trait Engine {
     fn get(&self, ts_name: &String) -> Option<TS>;
 }
 
-pub use engine::BTreeEngine;
-
-pub fn create_engine(engine_type: &str) -> Option<Box<dyn Engine>> {
+pub fn create_engine(engine_type: &str) -> Option<Box<dyn Engine + Send + Sync>> {
     if engine_type.eq("b-tree") {
         Some(Box::new(engine::BTreeEngine::new()))
     } else {

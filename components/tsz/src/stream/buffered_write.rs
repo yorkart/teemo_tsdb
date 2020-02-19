@@ -1,6 +1,6 @@
+use crate::stream::Buffer;
 use crate::stream::Write;
 use crate::Bit;
-use crate::stream::Buffer;
 
 /// BufferedWriter
 ///
@@ -21,13 +21,13 @@ impl BufferedWriter {
         }
     }
 
-//    pub fn with_capacity(capacity: usize) -> Self {
-//        BufferedWriter {
-//            buf: Vec::with_capacity(capacity),
-//            // set pos to 8 to indicate the buffer has no space presently since it is empty
-//            pos: 8,
-//        }
-//    }
+    //    pub fn with_capacity(capacity: usize) -> Self {
+    //        BufferedWriter {
+    //            buf: Vec::with_capacity(capacity),
+    //            // set pos to 8 to indicate the buffer has no space presently since it is empty
+    //            pos: 8,
+    //        }
+    //    }
 
     fn grow(&mut self) {
         self.buf.push(0);
@@ -106,16 +106,16 @@ impl Write for BufferedWriter {
         }
     }
 
-//    fn close(self) -> Box<[u8]> {
-//        self.buf.into_boxed_slice()
-//    }
+    //    fn close(self) -> Box<[u8]> {
+    //        self.buf.into_boxed_slice()
+    //    }
 }
 
 #[cfg(test)]
 mod tests {
+    use super::Bit;
     use crate::stream::BufferedWriter;
     use crate::stream::Write;
-    use super::Bit;
 
     #[test]
     fn write_bit() {
@@ -234,7 +234,7 @@ mod tests {
         // 1001 1100 1100
         b.write_bits(2508, 12);
 
-        println!("{:?}", b.buf);
+        info!("{:?}", b.buf);
 
         // 1111
         for _ in 0..4 {
@@ -243,7 +243,7 @@ mod tests {
 
         assert_eq!(b.buf.len(), 4);
 
-        println!("{:?}", b.buf);
+        info!("{:?}", b.buf);
 
         assert_eq!(b.buf[0], 170); // 0b10101010 = 170
         assert_eq!(b.buf[1], 9); // 0b00001001 = 9

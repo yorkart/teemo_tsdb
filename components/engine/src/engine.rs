@@ -7,13 +7,13 @@ use std::time::Duration;
 pub type TSTreeMap = BTreeMap<String, TS>;
 
 #[derive(Clone)]
-pub struct BTreeEngine {
+pub(crate) struct BTreeEngine {
     ts_store: common::SharedRwLock<TSTreeMap>,
     background_task_tx: SyncSender<TS>,
 }
 
 impl BTreeEngine {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         let (bg_tx, bg_rx) = std::sync::mpsc::sync_channel(10);
         let engine = BTreeEngine {
             ts_store: common::new_shared_rw_lock(BTreeMap::new()),
@@ -53,7 +53,7 @@ impl Engine for BTreeEngine {
                 self.background_task_tx.send(ts.clone()).unwrap();
                 store.insert(ts_name.to_string(), ts);
 
-                println!("create table : {}", ts_name);
+                info!("create table : {}", ts_name);
             }
         }
     }
@@ -63,7 +63,7 @@ impl Engine for BTreeEngine {
         match store.get(&raw.table_name) {
             Some(ts) => {
                 ts.append_async(raw.data_point);
-                println!("append raw: {}", raw.to_string());
+                info!("append raw: {}", raw.to_string());
             }
             None => {}
         }
@@ -77,9 +77,3 @@ impl Engine for BTreeEngine {
         }
     }
 }
-
-//impl Default for BTreeEngine {
-//    fn default() -> Self {
-//        Self::new()
-//    }
-//}

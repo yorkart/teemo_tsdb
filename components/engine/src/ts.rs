@@ -1,9 +1,9 @@
-use std::ops::DerefMut;
-use std::time::Duration;
-use std::sync::mpsc::{SyncSender, Receiver};
 use crate::block::{AppendOnlyBlock, ClosedBlock};
-use tszv1::{DataPoint, Encode, StdDecoder};
+use std::ops::DerefMut;
+use std::sync::mpsc::{Receiver, SyncSender};
+use std::time::Duration;
 use tszv1::stream::BufferedReader;
+use tszv1::{DataPoint, Encode, StdDecoder};
 
 #[derive(Clone)]
 pub struct TS {
@@ -38,18 +38,16 @@ impl TS {
 
     fn table_consumer(&self, data_rx: Receiver<DataPoint>) {
         let clone = self.clone();
-        std::thread::spawn(move || {
-            loop {
-                match data_rx.try_recv() {
-                    Ok(raw) => {
-                        clone.append(raw);
+        std::thread::spawn(move || loop {
+            match data_rx.try_recv() {
+                Ok(raw) => {
+                    clone.append(raw);
+                }
+                Err(_) => {
+                    if clone.close {
+                        break;
                     }
-                    Err(_) => {
-                        if clone.close {
-                            break;
-                        }
-                        std::thread::sleep(Duration::from_secs(1));
-                    }
+                    std::thread::sleep(Duration::from_secs(1));
                 }
             }
         });
@@ -101,19 +99,21 @@ impl TS {
             let mut aob = AppendOnlyBlock::new(begin_ts, end_ts);
             aob.encoder.encode(dp);
             append_only_blocks.push(aob);
-            println!("create AppendOnlyBlock {},{} [{}/{}]",
-                     begin_ts,
-                     end_ts,
-                     common::timestamp_secs_to_string(begin_ts),
-                     common::timestamp_secs_to_string(end_ts));
+            info!(
+                "create AppendOnlyBlock {},{} [{}/{}]",
+                begin_ts,
+                end_ts,
+                common::timestamp_secs_to_string(begin_ts),
+                common::timestamp_secs_to_string(end_ts)
+            );
             return;
         }
 
         let start_time = append_only_blocks.get(0).unwrap().time_begin;
-//        let end_time = append_only_blocks.get(append_only_blocks.len() - 1).unwrap().time_end;
+        //        let end_time = append_only_blocks.get(append_only_blocks.len() - 1).unwrap().time_end;
 
         if dp.time < start_time {
-            println!("skip old DataPoint: {}", dp.time);
+            info!("skip old DataPoint: {}", dp.time);
             // skip old data point.
             return;
         }
@@ -142,12 +142,20 @@ impl TS {
     }
 
     pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
-        where F: Fn(StdDecoder<BufferedReader>) {
-        println!("search ts: {}", common::timestamp_to_interval_str(begin_time, end_time));
+    where
+        F: Fn(StdDecoder<BufferedReader>),
+    {
+        info!(
+            "search ts: {}",
+            common::timestamp_to_interval_str(begin_time, end_time)
+        );
 
         let r = self.append_only_blocks.read().unwrap();
         for block in r.iter() {
-            println!("--> block: {}", common::timestamp_to_interval_str(block.time_begin, block.time_end));
+            info!(
+                "--> block: {}",
+                common::timestamp_to_interval_str(block.time_begin, block.time_end)
+            );
             let a = block.get_decoder();
             f(a);
         }
@@ -163,15 +171,15 @@ impl TS {
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, UNIX_EPOCH};
-    use chrono::{DateTime, Utc};
     use crate::ts::TS;
+    use chrono::{DateTime, Utc};
+    use std::time::{Duration, UNIX_EPOCH};
 
     #[test]
     fn time_align_test() {
         let ts = TS::new(1000);
         {
-// Tue Jan 14 2020 08:02:26 GMT+0800
+            // Tue Jan 14 2020 08:02:26 GMT+0800
             let timestamp = 1578960146;
             let (b, e) = ts.time_align(timestamp, 1 * 60 * 60 * 3);
             let origin_dt: DateTime<Utc> = {
@@ -186,13 +194,15 @@ mod tests {
                 let b_ts = UNIX_EPOCH + Duration::from_secs(e);
                 b_ts.into()
             };
-            println!("{}={}=>\n{}={}\n{}={}",
-                     timestamp,
-                     origin_dt.format("%Y-%m-%d %T%z"),
-                     b,
-                     begin_dt.format("%Y-%m-%d %H:%M:%S%z"),
-                     e,
-                     end_dt.format("%Y-%m-%d %T%z"));
+            info!(
+                "{}={}=>\n{}={}\n{}={}",
+                timestamp,
+                origin_dt.format("%Y-%m-%d %T%z"),
+                b,
+                begin_dt.format("%Y-%m-%d %H:%M:%S%z"),
+                e,
+                end_dt.format("%Y-%m-%d %T%z")
+            );
         }
 
         ts.get_decoder(0, 0, |_| {})

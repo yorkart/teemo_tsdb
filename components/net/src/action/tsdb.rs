@@ -1,13 +1,14 @@
 use bytes::buf::BufExt;
-use engine::{BTreeEngine, Engine, Raw};
+use engine::{Engine, Raw};
 use hyper::{header, Body, Request, Response, StatusCode};
 use serde_json::json;
 use std::borrow::Borrow;
+use std::sync::Arc;
 use tszv1::{DataPoint, Decode};
 
 pub async fn search(
     req: Request<Body>,
-    ts_engine: BTreeEngine,
+    ts_engine: Arc<Box<dyn Engine + Send + Sync>>,
 ) -> Result<Response<Body>, hyper::Error> {
     let whole_body = hyper::body::aggregate(req).await?;
 
@@ -29,7 +30,7 @@ pub async fn search(
                             match decoder.next() {
                                 Ok(dp) => {
                                     list.push(dp);
-                                    println!("reader => {}, {}", dp.time, dp.value);
+                                    info!("reader => {}, {}", dp.time, dp.value);
                                 }
                                 Err(_) => {
                                     break;
@@ -63,7 +64,7 @@ pub async fn search(
 
 pub async fn append(
     req: Request<Body>,
-    ts_engine: BTreeEngine,
+    ts_engine: Arc<Box<dyn Engine + Send + Sync>>,
 ) -> Result<Response<Body>, hyper::Error> {
     let whole_body = hyper::body::aggregate(req).await?;
 

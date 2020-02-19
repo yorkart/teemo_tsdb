@@ -10,5 +10,8 @@ keywords = ["time", "series", "compression", "gorilla"]
 common = {path="../common", version="0.1"}
 tszv1 = {path="../tszv1", version="0.1"}
 
+log = "0.4"
+log4rs = "0.10"
+
 chrono="0.4"
 timer="0.2"

@@ -1,8 +1,8 @@
-use std::collections::BTreeMap;
 use crate::storage::ts::TS;
-use std::sync::mpsc::{SyncSender, Receiver};
-use std::time::Duration;
 use crate::DataPoint;
+use std::collections::BTreeMap;
+use std::sync::mpsc::{Receiver, SyncSender};
+use std::time::Duration;
 
 #[derive(Debug)]
 pub struct Raw {
@@ -12,7 +12,10 @@ pub struct Raw {
 
 impl Raw {
     pub fn to_string(&self) -> String {
-        format!("{}:{{{},{}}}", self.table_name, self.data_point.time, self.data_point.value)
+        format!(
+            "{}:{{{},{}}}",
+            self.table_name, self.data_point.time, self.data_point.value
+        )
     }
 }
 
@@ -64,7 +67,7 @@ impl BTreeEngine {
                 self.background_task_tx.send(ts.clone()).unwrap();
                 store.insert(ts_name.to_string(), ts);
 
-                println!("create table : {}", ts_name);
+                info!("create table : {}", ts_name);
             }
         }
     }
@@ -74,7 +77,7 @@ impl BTreeEngine {
         match store.get(&raw.table_name) {
             Some(ts) => {
                 ts.append_async(raw.data_point);
-                println!("append raw: {}", raw.to_string());
+                info!("append raw: {}", raw.to_string());
             }
             None => {}
         }
@@ -83,12 +86,8 @@ impl BTreeEngine {
     pub fn get(&self, ts_name: &String) -> Option<TS> {
         let store = self.ts_store.read().unwrap();
         match store.get(ts_name) {
-            Some(ts) => {
-                Some(ts.clone())
-            }
-            None => {
-                None
-            }
+            Some(ts) => Some(ts.clone()),
+            None => None,
         }
     }
 }
