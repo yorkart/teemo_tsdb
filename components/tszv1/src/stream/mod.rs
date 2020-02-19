@@ -46,7 +46,7 @@ pub trait Read {
 /// Write
 ///
 /// Write is a trait that encapsulates the functionality required to write a stream of bytes.
-pub trait Write {
+pub trait Write : Clone{
     // Write a single bit to the underlying stream.
     fn write_bit(&mut self, bit: Bit);
 

@@ -11,7 +11,8 @@ nightly = []
 
 [dependencies]
 common = {path="../common", version="0.1"}
-tsz = {path="../tsz", version="0.1"}
+tszv1 = {path="../tszv1", version="0.1"}
+engine = {path="../engine", version="0.1"}
 
 bytes = "0.5"
 

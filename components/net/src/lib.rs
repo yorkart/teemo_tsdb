@@ -2,18 +2,21 @@
 
 extern crate bytes;
 extern crate futures;
-extern crate tokio;
 extern crate serde;
 extern crate serde_derive;
 extern crate serde_json;
+extern crate tokio;
 
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Method, Request, Response, Server, StatusCode, header};
+mod action;
+
 use bytes::buf::BufExt;
-use tsz::storage::{BTreeEngine, Raw};
-use tsz::{DataPoint, Decode};
-use std::borrow::Borrow;
+use engine::BTreeEngine;
+use engine::Raw;
+use hyper::service::{make_service_fn, service_fn};
+use hyper::{header, Body, Method, Request, Response, Server, StatusCode};
 use serde_json::json;
+use std::borrow::Borrow;
+use tszv1::{DataPoint, Decode};
 
 //struct HttpServer {
 //    ts_map: Arc<RwLock<TSMap>>,
@@ -21,14 +24,15 @@ use serde_json::json;
 
 /// This is our service handler. It receives a Request, routes on its
 /// path, and returns a Future of a Response.
-async fn action(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<Body>, hyper::Error> {
+async fn action(
+    req: Request<Body>,
+    ts_engine: BTreeEngine,
+) -> Result<Response<Body>, hyper::Error> {
     match (req.method(), req.uri().path()) {
         // Serve some instructions at /
-        (&Method::GET, "/") => {
-            Ok(Response::new(Body::from(
-                "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
-            )))
-        }
+        (&Method::GET, "/") => Ok(Response::new(Body::from(
+            "Try POSTing data to /echo such as: `curl localhost:3000/echo -XPOST -d 'hello world'`",
+        ))),
 
         (&Method::POST, "/search") => {
             let whole_body = hyper::body::aggregate(req).await?;
@@ -44,6 +48,7 @@ async fn action(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<B
                         Some(ts) => {
                             let from = from.timestamp() as u64;
                             let to = to.timestamp() as u64;
+
                             ts.get_decoder(from, to, |mut decoder| {
                                 let mut list = Vec::new();
                                 loop {
@@ -57,7 +62,7 @@ async fn action(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<B
                                         }
                                     }
                                 }
-//                                list
+                                // list
                             });
                         }
                         None => {}
@@ -67,19 +72,18 @@ async fn action(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<B
                         "msg": "",
                     })
                 }
-                Err(err) => {
-                    json!({
-                        "code": "500",
-                        "msg": err.description(),
-                    })
-                }
+                Err(err) => json!({
+                    "code": "500",
+                    "msg": err.description(),
+                }),
             };
 
             let json = resp_json.to_string(); // serde_json::to_string("ok").expect("");
             let response = Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(json)).expect("");
+                .body(Body::from(json))
+                .expect("");
             Ok(response)
         }
 
@@ -90,43 +94,57 @@ async fn action(req: Request<Body>, ts_engine: BTreeEngine) -> Result<Response<B
             let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
             let json_map = data.as_object().unwrap();
             let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
-            let timestamp = json_map.get("timestamp").unwrap().as_u64().unwrap();
-            let value = json_map.get("value").unwrap().as_f64().unwrap();
+            let mut timestamp = json_map.get("timestamp").unwrap().as_u64().unwrap();
+            let mut value = json_map.get("value").unwrap().as_f64().unwrap();
+
+            if timestamp == 0 {
+                timestamp = common::now_timestamp_secs();
+            }
+            if value < 0f64 {
+                value = (timestamp % 100) as f64;
+            }
 
             ts_engine.append(Raw {
                 table_name: String::from(table_name),
                 data_point: DataPoint::new(timestamp, value),
             });
 
-            let json = serde_json::to_string(&data).expect("");
+            let resp_json = json!({
+                "code": "200",
+                "msg": "ok",
+            });
+            let json = resp_json.to_string();
             let response = Response::builder()
                 .status(StatusCode::OK)
                 .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(json)).expect("");
+                .body(Body::from(json))
+                .expect("");
             Ok(response)
         }
 
         // Simply echo the body back to the client.
         (&Method::POST, "/table") => {
-            let whole_body = hyper::body::aggregate(req).await?;
-
-            let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
-            let json_map = data.as_object().unwrap();
-            let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
-
-            ts_engine.create_table(table_name.to_string());
-
-            let resp_json = json!({
-                "code": "200",
-                "msg": "ok",
-            });
-
-            let json = resp_json.to_string(); // serde_json::to_string("ok").expect("");
-            let response = Response::builder()
-                .status(StatusCode::OK)
-                .header(header::CONTENT_TYPE, "application/json")
-                .body(Body::from(json)).expect("");
-            Ok(response)
+            action::create_table(req, ts_engine).await
+            //            let whole_body = hyper::body::aggregate(req).await?;
+            //
+            //            let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
+            //            let json_map = data.as_object().unwrap();
+            //            let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
+            //
+            //            ts_engine.create_table(table_name.to_string());
+            //
+            //            let resp_json = json!({
+            //                "code": "200",
+            //                "msg": "ok",
+            //            });
+            //
+            //            let json = resp_json.to_string(); // serde_json::to_string("ok").expect("");
+            //            let response = Response::builder()
+            //                .status(StatusCode::OK)
+            //                .header(header::CONTENT_TYPE, "application/json")
+            //                .body(Body::from(json))
+            //                .expect("");
+            //            Ok(response)
         }
 
         // Reverse the entire body before sending back to the client.

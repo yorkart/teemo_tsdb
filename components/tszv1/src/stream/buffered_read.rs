@@ -23,6 +23,15 @@ impl BufferedReader {
         }
     }
 
+    /// new creates a new `BufferedReader` from `bytes`
+    pub fn new_buffer(bytes: Vec<u8>) -> Self {
+        BufferedReader {
+            bytes,
+            index: 0,
+            pos: 0,
+        }
+    }
+
     fn get_byte(&mut self) -> Result<u8, Error> {
         self.bytes.get(self.index).cloned().ok_or(Error::EOF)
     }

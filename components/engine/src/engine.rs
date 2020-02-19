@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
-use crate::storage::ts::TS;
 use std::sync::mpsc::{SyncSender, Receiver};
 use std::time::Duration;
-use crate::DataPoint;
+use tszv1::DataPoint;
+use crate::ts::TS;
 
 #[derive(Debug)]
 pub struct Raw {

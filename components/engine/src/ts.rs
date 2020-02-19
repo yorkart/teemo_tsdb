@@ -1,9 +1,9 @@
 use std::ops::DerefMut;
-use crate::{DataPoint, Encode, StdDecoder};
-use crate::stream::BufferedReader;
-use crate::storage::block::{AppendOnlyBlock, ClosedBlock, Block};
 use std::time::Duration;
 use std::sync::mpsc::{SyncSender, Receiver};
+use crate::block::{AppendOnlyBlock, ClosedBlock};
+use tszv1::{DataPoint, Encode, StdDecoder};
+use tszv1::stream::BufferedReader;
 
 #[derive(Clone)]
 pub struct TS {
@@ -98,7 +98,9 @@ impl TS {
         // no active block
         if append_only_blocks.len() == 0 {
             let (begin_ts, end_ts) = self.time_align(dp.time, self.period);
-            append_only_blocks.push(AppendOnlyBlock::new(begin_ts, end_ts));
+            let mut aob = AppendOnlyBlock::new(begin_ts, end_ts);
+            aob.encoder.encode(dp);
+            append_only_blocks.push(aob);
             println!("create AppendOnlyBlock {},{} [{}/{}]",
                      begin_ts,
                      end_ts,
@@ -141,11 +143,11 @@ impl TS {
 
     pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
         where F: Fn(StdDecoder<BufferedReader>) {
-        println!("search ts: [{},{})", begin_time, end_time);
+        println!("search ts: {}", common::timestamp_to_interval_str(begin_time, end_time));
 
         let r = self.append_only_blocks.read().unwrap();
         for block in r.iter() {
-            println!("-> block: {}", common::timestamp_secs_to_string(block.time_begin));
+            println!("--> block: {}", common::timestamp_to_interval_str(block.time_begin, block.time_end));
             let a = block.get_decoder();
             f(a);
         }
@@ -161,9 +163,9 @@ impl TS {
 
 #[cfg(test)]
 mod tests {
-    use crate::storage::ts::TS;
     use std::time::{Duration, UNIX_EPOCH};
     use chrono::{DateTime, Utc};
+    use crate::ts::TS;
 
     #[test]
     fn time_align_test() {

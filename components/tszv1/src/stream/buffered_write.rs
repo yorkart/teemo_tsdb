@@ -108,6 +108,16 @@ impl Write for BufferedWriter {
     }
 }
 
+// TODO clone always
+impl Clone for BufferedWriter {
+    fn clone(&self) -> Self {
+        BufferedWriter{
+            buf: self.buf.clone(),
+            pos: self.pos,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::BufferedWriter;

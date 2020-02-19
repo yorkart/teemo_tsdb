@@ -3,16 +3,24 @@ use chrono::{DateTime, Utc, ParseError, FixedOffset};
 use core::fmt;
 use std::error::Error;
 
-pub fn now_timestamp_mills() -> u128{
+pub fn timestamp_to_interval_str(begin_time: u64, end_time: u64) -> String{
+    format!("[{},{}), {}/{}",
+             begin_time,
+             end_time,
+             timestamp_secs_to_string(begin_time),
+             timestamp_secs_to_string(end_time))
+}
+
+pub fn now_timestamp_secs() -> u64{
     let start = SystemTime::now();
     let since_the_epoch = start.duration_since(UNIX_EPOCH)
         .expect("Time went backwards");
-    since_the_epoch.as_millis()
+    since_the_epoch.as_secs()
 }
 
 /// format timestamp to string
 ///
-pub fn timestamp_sec_to_string(timestamp: u64) -> String {
+pub fn timestamp_secs_to_string(timestamp: u64) -> String {
     let origin_dt: DateTime<Utc> = {
         let b_ts = UNIX_EPOCH + Duration::from_secs(timestamp);
         b_ts.into()
@@ -32,7 +40,7 @@ pub fn string_to_date_times(range_date_time: &str) -> Result<(DateTime<FixedOffs
         return Err(DateTimeError::ParseErr(from.err().unwrap()));
     }
 
-    let to = DateTime::parse_from_str(range.get(0).unwrap(), fmt_str);
+    let to = DateTime::parse_from_str(range.get(1).unwrap(), fmt_str);
     if to.is_err() {
         return Err(DateTimeError::ParseErr(to.err().unwrap()));
     }

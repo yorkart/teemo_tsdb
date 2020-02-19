@@ -10,14 +10,16 @@ edition = "2018"
 members = [
     "components/common",
     "components/tsz",
-    "components/tsz-rs",
+    "components/tszv1",
+    "components/engine",
     "components/net",
 ]
 
 [dependencies]
 common = {path="components/common", version="0.1"}
 tsz = {path="components/tsz", version="0.1"}
-tsz-rs = {path="components/tsz-rs", version="0.1"}
+tszv1 = {path="components/tszv1", version="0.1"}
+engine = {path="components/engine", version="0.1"}
 net = {path="components/net", version="0.1"}
 
 rocksdb = "0.13"

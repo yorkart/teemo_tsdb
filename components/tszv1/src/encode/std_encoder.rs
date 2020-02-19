@@ -20,8 +20,10 @@ pub const END_MARKER_LEN: u32 = 36;
 /// StdEncoder is used to encode `DataPoint`s
 #[derive(Debug)]
 pub struct StdEncoder<T: Write> {
-    time: u64,       // current time
-    delta: u64,      // current time delta
+    time: u64,
+    // current time
+    delta: u64,
+    // current time delta
     value_bits: u64, // current float value as bits
 
     // store the number of leading and trailing zeroes in the current xor as u32 so we
@@ -36,8 +38,8 @@ pub struct StdEncoder<T: Write> {
 }
 
 impl<T> StdEncoder<T>
-where
-    T: Write,
+    where
+        T: Write,
 {
     /// new creates a new StdEncoder whose starting timestamp is `start` and writes its encoded
     /// bytes to `w`
@@ -183,6 +185,25 @@ impl<T> Encode for StdEncoder<T>
     fn close(mut self) -> Box<[u8]> {
         self.w.write_bits(END_MARKER, 36);
         self.w.close()
+    }
+}
+
+// TODO clone always
+impl<T> Clone for StdEncoder<T>
+    where
+        T: Write,
+{
+    fn clone(&self) -> Self {
+        StdEncoder {
+            time: self.time,
+            delta: self.delta,
+            value_bits: self.value_bits,
+            leading_zeroes: self.leading_zeroes,  // 64 is an initial sentinel value
+            trailing_zeroes: self.trailing_zeroes, // 64 is an intitial sentinel value
+            first: self.first,
+            w: self.w.clone(),
+            size: self.size,
+        }
     }
 }
 
