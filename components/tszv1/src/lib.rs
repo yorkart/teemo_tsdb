@@ -8,12 +8,12 @@
 //! Below is a simple example of how to interact with `tsz` to encode and decode `DataPoint`s.
 //!
 //! ```rust,no_run
-//! extern crate tsz;
+//! extern crate tszv1;
 //!
 //! use std::vec::Vec;
-//! use tsz::{DataPoint, Encode, Decode, StdEncoder, StdDecoder};
-//! use tsz::stream::{BufferedReader, BufferedWriter};
-//! use tsz::decode::Error;
+//! use tszv1::{DataPoint, Encode, Decode, StdEncoder, StdDecoder};
+//! use tszv1::stream::{BufferedReader, BufferedWriter};
+//! use tszv1::decode::Error;
 //!
 //! const DATA: &'static str = "1482892270,1.76
 //! 1482892280,7.78
@@ -82,6 +82,9 @@
 //! }
 //! ```
 
+#[macro_use]
+extern crate serde_derive;
+
 pub type Buffer = Vec<u8>;
 
 /// Bit
@@ -106,7 +109,7 @@ impl Bit {
 /// DataPoint
 ///
 /// Struct used to represent a single datapoint. Consists of a time and value.
-#[derive(Debug, PartialEq, Copy)]
+#[derive(Debug, PartialEq, Copy, Serialize, Deserialize)]
 pub struct DataPoint {
     pub time: u64,
     pub value: f64,

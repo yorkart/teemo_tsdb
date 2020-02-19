@@ -141,9 +141,15 @@ impl TS {
         }
     }
 
-    pub fn get_decoder<F>(&self, begin_time: u64, end_time: u64, f: F)
+    pub fn get_decoder<F>(
+        &self,
+        begin_time: u64,
+        end_time: u64,
+        limit: usize,
+        f: F,
+    ) -> Vec<DataPoint>
     where
-        F: Fn(StdDecoder<BufferedReader>),
+        F: Fn(StdDecoder<BufferedReader>, &mut Vec<DataPoint>),
     {
         info!(
             "search ts: {}",
@@ -151,14 +157,21 @@ impl TS {
         );
 
         let r = self.append_only_blocks.read().unwrap();
+        let mut dp_vec = Vec::new();
         for block in r.iter() {
             info!(
                 "--> block: {}",
                 common::timestamp_to_interval_str(block.time_begin, block.time_end)
             );
             let a = block.get_decoder();
-            f(a);
+            f(a, dp_vec.as_mut());
+
+            if limit > 0 && dp_vec.len() >= limit {
+                break;
+            }
         }
+
+        dp_vec
     }
 
     /// timestamp : sec
@@ -205,6 +218,6 @@ mod tests {
             );
         }
 
-        ts.get_decoder(0, 0, |_| {})
+        //        ts.get_decoder(0, 0, |_, _| {})
     }
 }

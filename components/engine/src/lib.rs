@@ -12,22 +12,23 @@ use tszv1::DataPoint;
 #[derive(Debug)]
 pub struct Raw {
     pub table_name: String,
+    pub key: String,
     pub data_point: DataPoint,
 }
 
 impl Raw {
     pub fn to_string(&self) -> String {
         format!(
-            "{}:{{{},{}}}",
-            self.table_name, self.data_point.time, self.data_point.value
+            "{}:{},{{{},{}}}",
+            self.table_name, self.key, self.data_point.time, self.data_point.value
         )
     }
 }
 
 pub trait Engine {
-    fn create_table(&self, ts_name: String);
+    fn create_key(&self, raw: Raw);
     fn append(&self, raw: Raw);
-    fn get(&self, ts_name: &String) -> Option<TS>;
+    fn get(&self, table_name: &String, key: &String) -> Option<TS>;
 }
 
 pub fn create_engine(engine_type: &str) -> Option<Box<dyn Engine + Send + Sync>> {

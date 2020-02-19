@@ -42,36 +42,50 @@ impl BTreeEngine {
             }
         });
     }
+
+    fn append_ts(&self, ts: &TS, raw: Raw) {
+        ts.append_async(raw.data_point);
+        //        info!("append raw: {}", raw.to_string());
+    }
 }
+
 impl Engine for BTreeEngine {
-    fn create_table(&self, ts_name: String) {
+    fn create_key(&self, raw: Raw) {
         let mut store = self.ts_store.write().unwrap();
-        match store.get(ts_name.as_str()) {
-            Some(_) => {}
+        match store.get(&raw.key) {
+            Some(ts) => {
+                self.append_ts(ts, raw);
+            }
             None => {
                 let ts = TS::new(100000);
                 self.background_task_tx.send(ts.clone()).unwrap();
-                store.insert(ts_name.to_string(), ts);
 
-                info!("create table : {}", ts_name);
+                let key = raw.key.to_string();
+                self.append_ts(&ts, raw);
+
+                store.insert(key.to_string(), ts);
+                info!("new key: {}", key);
             }
         }
     }
 
     fn append(&self, raw: Raw) {
-        let store = self.ts_store.read().unwrap();
-        match store.get(&raw.table_name) {
-            Some(ts) => {
-                ts.append_async(raw.data_point);
-                info!("append raw: {}", raw.to_string());
-            }
-            None => {}
+        {
+            let store = self.ts_store.read().unwrap();
+            match store.get(&raw.key) {
+                Some(ts) => {
+                    self.append_ts(ts, raw);
+                    return;
+                }
+                None => {}
+            };
         }
+        self.create_key(raw);
     }
 
-    fn get(&self, ts_name: &String) -> Option<TS> {
+    fn get(&self, _table_name: &String, key: &String) -> Option<TS> {
         let store = self.ts_store.read().unwrap();
-        match store.get(ts_name) {
+        match store.get(key) {
             Some(ts) => Some(ts.clone()),
             None => None,
         }

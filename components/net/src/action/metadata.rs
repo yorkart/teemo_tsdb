@@ -6,15 +6,15 @@ use std::sync::Arc;
 
 pub async fn create_table(
     req: Request<Body>,
-    ts_engine: Arc<Box<dyn Engine + Send + Sync>>,
+    _ts_engine: Arc<Box<dyn Engine + Send + Sync>>,
 ) -> Result<Response<Body>, hyper::Error> {
     let whole_body = hyper::body::aggregate(req).await?;
 
     let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
     let json_map = data.as_object().unwrap();
-    let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
+    let _table_name = json_map.get("table_name").unwrap().as_str().unwrap();
 
-    ts_engine.create_table(table_name.to_string());
+    //    ts_engine.create_key(table_name.to_string());
 
     let resp_json = json!({
         "code": "200",

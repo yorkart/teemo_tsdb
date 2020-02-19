@@ -38,8 +38,8 @@ pub struct StdEncoder<T: Write> {
 }
 
 impl<T> StdEncoder<T>
-    where
-        T: Write,
+where
+    T: Write,
 {
     /// new creates a new StdEncoder whose starting timestamp is `start` and writes its encoded
     /// bytes to `w`
@@ -90,7 +90,7 @@ impl<T> StdEncoder<T>
 
         // store the delta of delta using variable length encoding
         #[cfg_attr(feature = "cargo-clippy", allow(match_overlapping_arm))]
-            match dod {
+        match dod {
             0 => {
                 self.w.write_bit(Bit::Zero);
             }
@@ -164,8 +164,8 @@ impl<T> StdEncoder<T>
 }
 
 impl<T> Encode for StdEncoder<T>
-    where
-        T: Write,
+where
+    T: Write,
 {
     fn encode(&mut self, dp: DataPoint) {
         let value_bits = unsafe { mem::transmute::<f64, u64>(dp.value) };
@@ -183,22 +183,22 @@ impl<T> Encode for StdEncoder<T>
     }
 
     fn close(mut self) -> Box<[u8]> {
-        self.w.write_bits(END_MARKER, 36);
+        self.w.write_bits(END_MARKER, END_MARKER_LEN);
         self.w.close()
     }
 }
 
 // TODO clone always
 impl<T> Clone for StdEncoder<T>
-    where
-        T: Write,
+where
+    T: Write,
 {
     fn clone(&self) -> Self {
         StdEncoder {
             time: self.time,
             delta: self.delta,
             value_bits: self.value_bits,
-            leading_zeroes: self.leading_zeroes,  // 64 is an initial sentinel value
+            leading_zeroes: self.leading_zeroes, // 64 is an initial sentinel value
             trailing_zeroes: self.trailing_zeroes, // 64 is an intitial sentinel value
             first: self.first,
             w: self.w.clone(),
@@ -209,10 +209,10 @@ impl<T> Clone for StdEncoder<T>
 
 #[cfg(test)]
 mod tests {
-    use crate::StdEncoder;
     use crate::encode::Encode;
     use crate::stream::BufferedWriter;
     use crate::DataPoint;
+    use crate::StdEncoder;
 
     #[test]
     fn create_new_encoder() {

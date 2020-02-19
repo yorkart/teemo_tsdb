@@ -15,36 +15,43 @@ pub async fn search(
     let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
     let json_map = data.as_object().unwrap();
     let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
+    let key = json_map.get("key").unwrap().as_str().unwrap();
     let interval = json_map.get("interval").unwrap().as_str().unwrap();
+    let limit = match json_map.get("limit") {
+        Some(v) => v.as_i64().unwrap() as usize,
+        None => 0,
+    };
 
     let resp_json = match common::string_to_date_times(interval) {
         Ok((from, to)) => {
-            match ts_engine.get(String::from(table_name).borrow()) {
-                Some(ts) => {
-                    let from = from.timestamp() as u64;
-                    let to = to.timestamp() as u64;
+            let resp_data =
+                match ts_engine.get(table_name.to_string().borrow(), key.to_string().borrow()) {
+                    Some(ts) => {
+                        let from = from.timestamp() as u64;
+                        let to = to.timestamp() as u64;
 
-                    ts.get_decoder(from, to, |mut decoder| {
-                        let mut list = Vec::new();
-                        loop {
-                            match decoder.next() {
-                                Ok(dp) => {
-                                    list.push(dp);
-                                    info!("reader => {}, {}", dp.time, dp.value);
-                                }
-                                Err(_) => {
-                                    break;
+                        let list = ts.get_decoder(from, to, limit, |mut decoder, dp_vec| {
+                            loop {
+                                match decoder.next() {
+                                    Ok(dp) => {
+                                        dp_vec.push(dp);
+                                        //                                    info!("reader => {}, {}", dp.time, dp.value);
+                                    }
+                                    Err(_) => {
+                                        break;
+                                    }
                                 }
                             }
-                        }
-                        // list
-                    });
-                }
-                None => {}
-            };
+                            // list
+                        });
+                        list
+                    }
+                    None => Vec::new(),
+                };
             json!({
                 "code": "200",
                 "msg": "",
+                "data": resp_data,
             })
         }
         Err(err) => json!({
@@ -71,6 +78,7 @@ pub async fn append(
     let data: serde_json::Value = serde_json::from_reader(whole_body.reader()).expect("");
     let json_map = data.as_object().unwrap();
     let table_name = json_map.get("table_name").unwrap().as_str().unwrap();
+    let key = json_map.get("key").unwrap().as_str().unwrap();
     let mut timestamp = json_map.get("timestamp").unwrap().as_u64().unwrap();
     let mut value = json_map.get("value").unwrap().as_f64().unwrap();
 
@@ -83,6 +91,7 @@ pub async fn append(
 
     ts_engine.append(Raw {
         table_name: String::from(table_name),
+        key: String::from(key),
         data_point: DataPoint::new(timestamp, value),
     });
 
