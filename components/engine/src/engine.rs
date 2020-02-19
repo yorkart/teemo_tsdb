@@ -1,20 +1,8 @@
-use std::collections::BTreeMap;
-use std::sync::mpsc::{SyncSender, Receiver};
-use std::time::Duration;
-use tszv1::DataPoint;
 use crate::ts::TS;
-
-#[derive(Debug)]
-pub struct Raw {
-    pub table_name: String,
-    pub data_point: DataPoint,
-}
-
-impl Raw {
-    pub fn to_string(&self) -> String {
-        format!("{}:{{{},{}}}", self.table_name, self.data_point.time, self.data_point.value)
-    }
-}
+use crate::{Engine, Raw};
+use std::collections::BTreeMap;
+use std::sync::mpsc::{Receiver, SyncSender};
+use std::time::Duration;
 
 pub type TSTreeMap = BTreeMap<String, TS>;
 
@@ -54,8 +42,9 @@ impl BTreeEngine {
             }
         });
     }
-
-    pub fn create_table(&self, ts_name: String) {
+}
+impl Engine for BTreeEngine {
+    fn create_table(&self, ts_name: String) {
         let mut store = self.ts_store.write().unwrap();
         match store.get(ts_name.as_str()) {
             Some(_) => {}
@@ -69,7 +58,7 @@ impl BTreeEngine {
         }
     }
 
-    pub fn append(&self, raw: Raw) {
+    fn append(&self, raw: Raw) {
         let store = self.ts_store.read().unwrap();
         match store.get(&raw.table_name) {
             Some(ts) => {
@@ -80,15 +69,11 @@ impl BTreeEngine {
         }
     }
 
-    pub fn get(&self, ts_name: &String) -> Option<TS> {
+    fn get(&self, ts_name: &String) -> Option<TS> {
         let store = self.ts_store.read().unwrap();
         match store.get(ts_name) {
-            Some(ts) => {
-                Some(ts.clone())
-            }
-            None => {
-                None
-            }
+            Some(ts) => Some(ts.clone()),
+            None => None,
         }
     }
 }

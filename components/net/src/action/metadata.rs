@@ -1,5 +1,5 @@
 use bytes::buf::BufExt;
-use engine::BTreeEngine;
+use engine::{BTreeEngine, Engine};
 use hyper::{header, Body, Request, Response, StatusCode};
 use serde_json::json;
 
