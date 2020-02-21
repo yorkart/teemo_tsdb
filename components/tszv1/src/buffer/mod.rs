@@ -1,6 +1,9 @@
+use serde::export::fmt::{Debug, Error};
+use serde::export::Formatter;
 use std::borrow::BorrowMut;
 use std::collections::linked_list::Iter;
-use std::ops::Index;
+use std::collections::LinkedList;
+use std::ops::{Index, IndexMut};
 
 pub struct Block {
     pub data: Vec<u8>,
@@ -16,10 +19,30 @@ impl Block {
             end_index: start_index + capacity,
         }
     }
+
+    fn with_array(array: Box<[u8]>, start_index: usize) -> Self {
+        let len = array.len();
+        let data = array.into_vec();
+        Block {
+            data,
+            start_index,
+            end_index: start_index + len,
+        }
+    }
+}
+
+impl Clone for Block {
+    fn clone(&self) -> Self {
+        Block {
+            data: self.data.clone(),
+            start_index: self.start_index,
+            end_index: self.end_index,
+        }
+    }
 }
 
 pub struct Buffer {
-    blocks: std::collections::LinkedList<Block>,
+    blocks: LinkedList<Block>,
     init_capacity: usize,
     incr_factor: f32,
     len: usize,
@@ -28,10 +51,23 @@ pub struct Buffer {
 impl Buffer {
     pub fn new(init_capacity: usize, incr_factor: f32) -> Self {
         Buffer {
-            blocks: std::collections::LinkedList::new(),
+            blocks: LinkedList::new(),
             init_capacity,
             incr_factor,
             len: 0,
+        }
+    }
+
+    pub fn with_array(array: Box<[u8]>, incr_factor: f32) -> Self {
+        let len = array.len();
+        let mut blocks = LinkedList::new();
+        blocks.push_back(Block::with_array(array, 0));
+
+        Buffer {
+            blocks,
+            init_capacity: len,
+            incr_factor,
+            len,
         }
     }
 
@@ -120,6 +156,27 @@ impl Buffer {
         }
     }
 
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut u8> {
+        if index >= self.len {
+            return None;
+        }
+
+        // walk linked list
+        let mut iter = self.blocks.iter_mut();
+        loop {
+            match iter.next_back() {
+                Some(block) => {
+                    if index >= block.start_index && index < block.end_index {
+                        return block.data.get_mut(index - block.start_index);
+                    }
+                }
+                None => {
+                    return None;
+                }
+            }
+        }
+    }
+
     pub fn into_boxed_slice(mut self) -> Box<[u8]> {
         let mut vec = Vec::with_capacity(self.len);
         loop {
@@ -142,6 +199,46 @@ impl Index<usize> for Buffer {
 
     fn index(&self, index: usize) -> &Self::Output {
         self.get(index).unwrap()
+    }
+}
+
+impl IndexMut<usize> for Buffer {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.get_mut(index).unwrap()
+        //        let n = self.get(index).as_mut();
+        //        IndexMut::index_mut(&mut **self, index)
+    }
+}
+
+impl Debug for Buffer {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        f.debug_tuple("Iter").field(&self.len).finish()
+    }
+}
+
+impl Default for Buffer {
+    fn default() -> Self {
+        Buffer::new(10, 0.2)
+    }
+}
+
+impl Clone for Buffer {
+    fn clone(&self) -> Self {
+        let mut blocks = LinkedList::new();
+        let mut iter = self.blocks.iter();
+        loop {
+            match iter.next() {
+                Some(block) => blocks.push_back(block.clone()),
+                None => break,
+            }
+        }
+
+        Buffer {
+            blocks,
+            init_capacity: self.init_capacity,
+            incr_factor: self.incr_factor,
+            len: self.len,
+        }
     }
 }
 
@@ -191,12 +288,17 @@ impl<'a> Iterator for BufferIter<'a> {
 mod tests {
     use crate::buffer::Buffer;
     use rand::prelude::*;
+
     #[test]
     fn buffer_test() {
         let size = 10240;
         let mut vec = Vec::with_capacity(size);
         for _i in 0..size {
-            vec.push(random::<u8>())
+            let mut n = random::<u8>();
+            if n == 255 {
+                n = 254;
+            }
+            vec.push(n);
         }
 
         let mut buffer = Buffer::new(5, 0.2);
@@ -216,7 +318,7 @@ mod tests {
             match iter.next() {
                 Some(value) => {
                     assert_eq!(value, vec[i]);
-                    println!("{} => {}", i, value);
+                    //                    println!("{} => {}", i, value);
                     i = i + 1;
                 }
                 None => {
@@ -225,7 +327,16 @@ mod tests {
             }
         }
 
-        println!("validate by BoxedSlice");
+        println!("validate by get_mut");
+        for i in 0..size {
+            buffer[i] += 1;
+        }
+        for i in 0..size {
+            assert_eq!(buffer[i] - 1, vec[i]);
+            buffer[i] -= 1
+        }
+
+        println!("validate by into_boxed_slice");
         let slice = buffer.into_boxed_slice();
         for i in 0..size {
             assert_eq!(slice[i], vec[i]);

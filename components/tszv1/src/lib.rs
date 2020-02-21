@@ -85,7 +85,23 @@
 #[macro_use]
 extern crate serde_derive;
 
-pub type Buffer = Vec<u8>;
+//pub type Buffer = Vec<u8>;
+pub type Buffer = buffer::Buffer;
+
+pub fn buffer_new() -> Buffer {
+    //    Buffer::new()
+    Buffer::new(1024, 0.2)
+}
+
+pub fn buffer_with_capacity(capacity: usize) -> Buffer {
+    //    Buffer::with_capacity(capacity)
+    Buffer::new(capacity, 0.2)
+}
+
+pub fn buffer_into_vec(bytes: Box<[u8]>) -> Buffer {
+    // bytes.into_vec()
+    Buffer::with_array(bytes, 0.2)
+}
 
 /// Bit
 ///

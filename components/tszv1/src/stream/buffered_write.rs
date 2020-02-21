@@ -1,14 +1,15 @@
 use std::boxed::Box;
 
 use crate::stream::Write;
-use crate::Bit;
+use crate::{buffer_new, Bit};
+use crate::{buffer_with_capacity, Buffer};
 
 /// BufferedWriter
 ///
 /// BufferedWriter writes bytes to a buffer.
 #[derive(Debug, Default)]
 pub struct BufferedWriter {
-    buf: Vec<u8>,
+    buf: Buffer,
     pos: u32, // position in the last byte in the buffer
 }
 
@@ -16,7 +17,7 @@ impl BufferedWriter {
     /// new creates a new BufferedWriter
     pub fn new() -> Self {
         BufferedWriter {
-            buf: Vec::new(),
+            buf: buffer_new(),
             // set pos to 8 to indicate the buffer has no space presently since it is empty
             pos: 8,
         }
@@ -24,7 +25,7 @@ impl BufferedWriter {
 
     pub fn with_capacity(capacity: usize) -> Self {
         BufferedWriter {
-            buf: Vec::with_capacity(capacity),
+            buf: buffer_with_capacity(capacity),
             // set pos to 8 to indicate the buffer has no space presently since it is empty
             pos: 8,
         }
@@ -111,7 +112,7 @@ impl Write for BufferedWriter {
 // TODO clone always
 impl Clone for BufferedWriter {
     fn clone(&self) -> Self {
-        BufferedWriter{
+        BufferedWriter {
             buf: self.buf.clone(),
             pos: self.pos,
         }

@@ -1,10 +1,12 @@
-use tszv1::stream::{BufferedWriter, BufferedReader};
-use tszv1::{StdEncoder, StdDecoder, DataPoint, Decode, Encode};
+use tszv1::stream::{BufferedReader, BufferedWriter};
 use tszv1::Buffer;
+use tszv1::{buffer_into_vec, DataPoint, Decode, Encode, StdDecoder, StdEncoder};
 
 pub trait Block {
     //    fn get_decoder(&self) -> StdDecoder<BufferedReader>;
-    fn read<F>(&self, f: F) where F: Fn(DataPoint);
+    fn read<F>(&self, f: F)
+    where
+        F: Fn(DataPoint);
 }
 
 #[derive(Debug)]
@@ -39,12 +41,15 @@ impl AppendOnlyBlock {
 
 impl Block for AppendOnlyBlock {
     // TODO clone always
-//    fn get_decoder(&self) -> StdDecoder<BufferedReader> {
-//        let reader = BufferedReader::new(self.encoder.clone().close());
-//        StdDecoder::new(reader)
-//    }
+    //    fn get_decoder(&self) -> StdDecoder<BufferedReader> {
+    //        let reader = BufferedReader::new(self.encoder.clone().close());
+    //        StdDecoder::new(reader)
+    //    }
 
-    fn read<F>(&self, f: F) where F: Fn(DataPoint) {
+    fn read<F>(&self, f: F)
+    where
+        F: Fn(DataPoint),
+    {
         let mut decoder = self.get_decoder();
         loop {
             match decoder.next() {
@@ -68,8 +73,8 @@ pub struct ClosedBlock {
 
 impl ClosedBlock {
     pub fn new(append_only_block: &AppendOnlyBlock) -> Self {
-        let bytes = append_only_block.get_buffer().to_vec();
-//        let bytes = Arc::new(bytes);
+        let bytes = buffer_into_vec(append_only_block.get_buffer());
+        //        let bytes = Arc::new(bytes);
         ClosedBlock {
             time_begin: append_only_block.time_begin,
             time_end: append_only_block.time_end,
@@ -85,7 +90,10 @@ impl ClosedBlock {
 }
 
 impl Block for ClosedBlock {
-    fn read<F>(&self, f: F) where F: Fn(DataPoint) {
+    fn read<F>(&self, f: F)
+    where
+        F: Fn(DataPoint),
+    {
         let mut decoder = self.get_decoder();
         loop {
             match decoder.next() {

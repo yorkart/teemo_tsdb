@@ -1,30 +1,31 @@
 use std::boxed::Box;
 
 use crate::stream::{Error, Read};
-use crate::Bit;
+use crate::Buffer;
+use crate::{buffer_into_vec, Bit};
 
 /// BufferedReader
 ///
 /// BufferedReader encapsulates a buffer of bytes which can be read from.
 #[derive(Debug)]
 pub struct BufferedReader {
-    bytes: Vec<u8>, // internal buffer of bytes
-    index: usize,   // index into bytes
-    pos: u32,       // position in the byte we are currently reading
+    bytes: Buffer, // internal buffer of bytes
+    index: usize,  // index into bytes
+    pos: u32,      // position in the byte we are currently reading
 }
 
 impl BufferedReader {
     /// new creates a new `BufferedReader` from `bytes`
     pub fn new(bytes: Box<[u8]>) -> Self {
         BufferedReader {
-            bytes: bytes.into_vec(),
+            bytes: buffer_into_vec(bytes), // bytes.into_vec(),
             index: 0,
             pos: 0,
         }
     }
 
     /// new creates a new `BufferedReader` from `bytes`
-    pub fn new_buffer(bytes: Vec<u8>) -> Self {
+    pub fn new_buffer(bytes: Buffer) -> Self {
         BufferedReader {
             bytes,
             index: 0,
