@@ -128,6 +128,8 @@ impl DataPoint {
     }
 }
 
+pub mod buffer;
+
 pub mod stream;
 
 pub mod encode;
