@@ -38,3 +38,29 @@ pub fn create_engine(engine_type: &str) -> Option<Box<dyn Engine + Send + Sync>>
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{create_engine, Raw};
+    use tszv1::DataPoint;
+
+    #[test]
+    fn engine_test() {
+        let engine = create_engine("b-tree").unwrap();
+        let begin = common::now_timestamp_secs();
+
+        for i in 0..1000000 {
+            engine.append(Raw {
+                table_name: "table".to_string(),
+                key: "k".to_string(),
+                data_point: DataPoint {
+                    time: common::now_timestamp_secs(),
+                    value: i as f64,
+                },
+            })
+        }
+
+        let end = common::now_timestamp_secs();
+        println!("time spend: {}", end - begin);
+    }
+}

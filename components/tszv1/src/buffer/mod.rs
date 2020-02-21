@@ -92,10 +92,7 @@ impl Buffer {
         }
 
         let mut block = Block::new(incr_capacity, self.len);
-        println!(
-            "new block start:{}, end:{}",
-            block.start_index, block.end_index
-        );
+        //        println!("new block start:{}, end:{}", block.start_index, block.end_index);
         block.data.push(first_value);
 
         self.blocks.push_back(block);
